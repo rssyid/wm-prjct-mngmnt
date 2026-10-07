@@ -298,6 +298,16 @@ export async function handleManualTransition(ctx: TransitionContext) {
           409
         );
       }
+      if (
+        !project.bastDocument ||
+        !project.bastDocument.bastFileUrl ||
+        !project.bastDocument.bastFileUrl.trim()
+      ) {
+        throw new AppError(
+          "Dokumen BAST belum memiliki file lampiran (bastFileUrl wajib terisi sebelum pengajuan BAST)",
+          400
+        );
+      }
 
       return applyTransitionInternal({
         projectId,

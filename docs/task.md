@@ -31,7 +31,7 @@
 - [x] UI kiriman berulang (deliveries) + keterlambatan dari kiriman terakhir
 - [x] Resubmit AFCE setelah REJECTED (attempt baru); UI history approval
 - [x] Progres mingguan: validasi 1 log/paket/minggu; edit hanya minggu berjalan
-- [ ] Verifikasi BAST khusus SUPER_ADMIN; proyek COMPLETED read-only di UI
+- [x] Verifikasi BAST khusus SUPER_ADMIN; proyek COMPLETED read-only di UI
 - [x] Paginasi server + search debounce di list proyek
 - [ ] Gantt portofolio; laporan PDF/Excel (status, outstanding payment, realisasi anggaran)
 - [ ] Upload dokumen & foto via presign R2 + kompresi client (≤1600 px, q0.8)
@@ -50,7 +50,7 @@
 - [ ] Command palette cmdk (Ctrl+K)
 - [x] Konstanta status terpusat `lib/constants/status.ts` (skeleton & kartu mobile pada fase tabel)
 - [x] Font Inter + JetBrains Mono via next/font; dark mode kontras ditingkatkan
-- [ ] AlertDialog + alasan wajib untuk HOLD/CANCEL; audit aksesibilitas
+- [x] AlertDialog + alasan wajib untuk HOLD/CANCEL; audit aksesibilitas
 - [ ] Pecah `projects/[id]/page.tsx` menjadi komponen domain
 
 ## Phase F — Rilis
