@@ -39,11 +39,13 @@ import {
   ProjectStatus,
 } from "@prisma/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   FileCheck2,
   History,
   Layers,
@@ -64,6 +66,7 @@ interface ApprovalItemState {
   approvedAt?: string | null;
   rejectedAt?: string | null;
   notes?: string | null;
+  evidenceDocUrl?: string | null;
 }
 
 interface ApprovalSnapshotResponse {
@@ -78,6 +81,7 @@ interface ApprovalSnapshotResponse {
   approvedAt: string | null;
   rejectedAt: string | null;
   notes: string | null;
+  evidenceDocUrl?: string | null;
   createdAt: string;
 }
 
@@ -226,6 +230,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
             approvedAt: a.approvedAt,
             rejectedAt: a.rejectedAt,
             notes: a.notes || "",
+            evidenceDocUrl: a.evidenceDocUrl || null,
           }))
         );
       } else {
@@ -341,6 +346,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
           personName: a.personName.trim() || null,
           status: a.status,
           notes: a.notes ? a.notes.trim() : null,
+          evidenceDocUrl: a.evidenceDocUrl || null,
         })),
       };
 
@@ -912,6 +918,22 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                         className="h-8 text-xs"
                       />
                     </div>
+
+                    <div className="text-xs space-y-1 pt-1 border-t border-border/50">
+                      <Label className="text-[11px] text-muted-foreground">
+                        Berkas Bukti Paraf / Scan Dokumen (Opsional)
+                      </Label>
+                      <FileUploadButton
+                        value={item.evidenceDocUrl}
+                        onChange={(url) =>
+                          handleUpdateApprover(index, "evidenceDocUrl", url)
+                        }
+                        folder="afce"
+                        accept="application/pdf,image/*"
+                        disabled={isCompletedOrCancelled}
+                        label="Unggah Bukti Paraf"
+                      />
+                    </div>
                   </div>
                 );
               })}
@@ -997,6 +1019,17 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                                 <span className="text-[11px] text-rose-600 dark:text-rose-400 italic max-w-xs truncate">
                                   &ldquo;{snap.notes}&rdquo;
                                 </span>
+                              )}
+                              {snap.evidenceDocUrl && (
+                                <a
+                                  href={snap.evidenceDocUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                                  title="Buka lampiran bukti paraf"
+                                >
+                                  <ExternalLink className="h-3 w-3" /> Berkas
+                                </a>
                               )}
                               <Badge
                                 variant="outline"

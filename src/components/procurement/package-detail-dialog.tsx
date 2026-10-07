@@ -25,17 +25,20 @@ import {
   PAYMENT_STATUS_CONFIG,
 } from "@/lib/constants/status";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { PackageCategory, PaymentStatus } from "@prisma/client";
+import { PackageCategory, PackageDocType, PaymentStatus } from "@prisma/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import {
   AlertCircle,
   AlertTriangle,
   Calendar,
   CheckCircle2,
   CreditCard,
+  ExternalLink,
   FileText,
   Loader2,
   Package,
+  Paperclip,
   Plus,
   Trash2,
   Truck,
@@ -83,6 +86,17 @@ interface PackageDeliveryData {
   }[];
 }
 
+interface PackageDocumentData {
+  id: string;
+  workPackageId: string;
+  docType: PackageDocType;
+  docNumber?: string | null;
+  docDate?: string | null;
+  fileUrl: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
 interface FullPackageDetail {
   id: string;
   projectId: string;
@@ -108,6 +122,7 @@ interface FullPackageDetail {
   vendor?: { id: string; name: string } | null;
   items: PackageItemData[];
   deliveries: PackageDeliveryData[];
+  documents?: PackageDocumentData[];
 }
 
 export function PackageDetailDialog({
@@ -136,6 +151,16 @@ export function PackageDetailDialog({
     text: string;
     type: "success" | "error";
   } | null>(null);
+
+  // State untuk form dokumen paket
+  const [docType, setDocType] = useState<PackageDocType>(PackageDocType.PR);
+  const [docNumber, setDocNumber] = useState<string>("");
+  const [docDate, setDocDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [docFileUrl, setDocFileUrl] = useState<string | null>(null);
+  const [docNotes, setDocNotes] = useState<string>("");
+  const [docActionError, setDocActionError] = useState<string | null>(null);
 
   // Fetch detail lengkap paket
   const { data, isLoading } = useQuery<{
@@ -338,6 +363,70 @@ export function PackageDetailDialog({
     },
   });
 
+  // Mutasi tambah berkas dokumen paket
+  const addDocumentMutation = useMutation({
+    mutationFn: async () => {
+      if (!docFileUrl) {
+        throw new Error("Berkas dokumen wajib diunggah terlebih dahulu");
+      }
+      setDocActionError(null);
+      const res = await fetch(
+        `/api/projects/${projectId}/packages/${packageId}/documents`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            docType,
+            docNumber: docNumber.trim() || undefined,
+            docDate: docDate ? new Date(docDate).toISOString() : undefined,
+            fileUrl: docFileUrl,
+            notes: docNotes.trim() || undefined,
+          }),
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Gagal menyimpan dokumen paket");
+      }
+      return json.data;
+    },
+    onSuccess: () => {
+      setDocNumber("");
+      setDocFileUrl(null);
+      setDocNotes("");
+      queryClient.invalidateQueries({
+        queryKey: ["package-detail", packageId],
+      });
+    },
+    onError: (err: Error) => {
+      setDocActionError(err.message);
+    },
+  });
+
+  // Mutasi hapus berkas dokumen paket
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (docId: string) => {
+      setDocActionError(null);
+      const res = await fetch(
+        `/api/projects/${projectId}/packages/${packageId}/documents/${docId}`,
+        { method: "DELETE" }
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Gagal menghapus dokumen paket");
+      }
+      return json.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["package-detail", packageId],
+      });
+    },
+    onError: (err: Error) => {
+      setDocActionError(err.message);
+    },
+  });
+
   if (!open) return null;
 
   const statusConfig = pkg ? PACKAGE_STATUS_CONFIG[pkg.status] : null;
@@ -453,6 +542,10 @@ export function PackageDetailDialog({
                   <TabsTrigger value="admin" className="text-xs">
                     <FileText className="h-3.5 w-3.5 mr-1" />
                     Administrasi PR/PO
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="text-xs">
+                    <Paperclip className="h-3.5 w-3.5 mr-1" />
+                    Dokumen ({pkg.documents?.length || 0})
                   </TabsTrigger>
                 </TabsList>
 
@@ -978,6 +1071,190 @@ export function PackageDetailDialog({
                         <p className="text-foreground text-xs mt-0.5">
                           {pkg.remarks}
                         </p>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* TAB 5: DOKUMEN PR / PO / DO / INVOICE */}
+                <TabsContent value="documents" className="space-y-4">
+                  {docActionError && (
+                    <div className="rounded-md bg-destructive/15 p-2.5 text-xs text-destructive flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{docActionError}</span>
+                    </div>
+                  )}
+
+                  {/* Form Tambah Dokumen */}
+                  <div className="rounded-md border p-3.5 bg-muted/20 space-y-3">
+                    <h4 className="font-semibold text-foreground text-xs flex items-center gap-1.5">
+                      <Paperclip className="h-3.5 w-3.5 text-primary" />
+                      Unggah Dokumen Paket Pengadaan
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Tipe Dokumen</Label>
+                        <Select
+                          value={docType}
+                          onValueChange={(val) => setDocType(val as PackageDocType)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Pilih tipe" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={PackageDocType.PR}>Purchase Requisition (PR)</SelectItem>
+                            <SelectItem value={PackageDocType.PO}>Purchase Order (PO)</SelectItem>
+                            <SelectItem value={PackageDocType.DO}>Delivery Order (DO)</SelectItem>
+                            <SelectItem value={PackageDocType.INVOICE}>Invoice / Tagihan</SelectItem>
+                            <SelectItem value={PackageDocType.OTHER}>Lainnya</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="docNumber" className="text-[11px]">
+                          Nomor Dokumen
+                        </Label>
+                        <Input
+                          id="docNumber"
+                          placeholder="Misal: PO/WM/2026/042"
+                          className="h-8 text-xs font-mono"
+                          value={docNumber}
+                          onChange={(e) => setDocNumber(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="docDate" className="text-[11px]">
+                          Tanggal Dokumen
+                        </Label>
+                        <Input
+                          id="docDate"
+                          type="date"
+                          className="h-8 text-xs"
+                          value={docDate}
+                          onChange={(e) => setDocDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="docNotes" className="text-[11px]">
+                        Catatan Dokumen (Opsional)
+                      </Label>
+                      <Input
+                        id="docNotes"
+                        placeholder="Keterangan singkat berkas..."
+                        className="h-8 text-xs"
+                        value={docNotes}
+                        onChange={(e) => setDocNotes(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Berkas Dokumen (PDF, XLSX, atau Foto)</Label>
+                      <FileUploadButton
+                        value={docFileUrl}
+                        onChange={setDocFileUrl}
+                        folder="packages"
+                        accept="application/pdf,image/*,.xlsx,.xls"
+                        label="Pilih & Unggah Dokumen"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => addDocumentMutation.mutate()}
+                        disabled={addDocumentMutation.isPending || !docFileUrl}
+                      >
+                        {addDocumentMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Menyimpan...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-3.5 w-3.5" />
+                            Simpan Dokumen
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Daftar Dokumen yang Tersimpan */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-foreground text-xs">
+                      Daftar Berkas Terlampir ({pkg.documents?.length || 0})
+                    </h4>
+
+                    {(!pkg.documents || pkg.documents.length === 0) ? (
+                      <div className="border border-dashed rounded-md p-6 text-center text-xs text-muted-foreground">
+                        Belum ada dokumen yang diunggah untuk paket kerja ini.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {pkg.documents.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between gap-3 rounded-md border p-3 bg-muted/10 text-xs"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Badge variant="outline" className="text-[10px] shrink-0 font-semibold">
+                                {doc.docType}
+                              </Badge>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-foreground font-mono truncate">
+                                    {doc.docNumber || "Tanpa Nomor Dokumen"}
+                                  </span>
+                                  {doc.docDate && (
+                                    <span className="text-[11px] text-muted-foreground">
+                                      ({formatDate(doc.docDate)})
+                                    </span>
+                                  )}
+                                </div>
+                                {doc.notes && (
+                                  <p className="text-[11px] text-muted-foreground truncate">
+                                    {doc.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                asChild
+                                className="h-7 px-2 text-xs gap-1"
+                              >
+                                <a
+                                  href={doc.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Buka Dokumen di Tab Baru"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Buka File
+                                </a>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => deleteDocumentMutation.mutate(doc.id)}
+                                disabled={deleteDocumentMutation.isPending}
+                                title="Hapus dokumen"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

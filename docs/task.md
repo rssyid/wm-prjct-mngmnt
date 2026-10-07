@@ -36,7 +36,7 @@
 - [x] Paginasi server + search debounce di list proyek
 - [x] Dashboard KPI & Early Warning System (EWS) UI auto-refresh 60s, skeleton, navbar badge terpadu
 - [ ] Gantt portofolio; laporan PDF/Excel (status, outstanding payment, realisasi anggaran)
-- [ ] Upload dokumen & foto via presign R2 + kompresi client (≤1600 px, q0.8)
+- [x] Upload dokumen & foto via presign R2 + kompresi client (≤1600 px, q0.8)
 
 ## Phase D — Performa & Stack
 

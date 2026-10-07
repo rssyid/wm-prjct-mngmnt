@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { AppShell } from "@/components/layout/app-shell";
 import { ProcurementTab } from "@/components/procurement/procurement-tab";
@@ -49,12 +50,15 @@ import {
   StatusIndicator,
 } from "@prisma/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import {
   AlertCircle,
   ArrowLeft,
   Calendar,
   Clock,
   Coins,
+  ExternalLink,
+  FileText,
   HardHat,
   Lock,
   MapPin,
@@ -62,6 +66,7 @@ import {
   Play,
   Search,
   ShieldAlert,
+  Upload,
   XCircle,
 } from "lucide-react";
 import { getSession } from "next-auth/react";
@@ -90,6 +95,8 @@ interface ProjectDetailResponse {
     targetEndDate: string | null;
     latitude: number | null;
     longitude: number | null;
+    sitePlanUrl?: string | null;
+    drawingUrl?: string | null;
     createdAt: string;
     company: { id: string; code: string; name: string };
     estate: { id: string; code: string; name: string };
@@ -157,6 +164,46 @@ export default function ProjectDetailPage({
   const isSuperAdmin = userRole === Role.SUPER_ADMIN;
   const canManage =
     userRole === Role.SUPER_ADMIN || userRole === Role.WM_HO_SPECIALIST;
+
+  // Dialog & Form Dokumen Proyek
+  const [isEditDocDialogOpen, setIsEditDocDialogOpen] = useState(false);
+  const [editSitePlanUrl, setEditSitePlanUrl] = useState<string | null>(null);
+  const [editDrawingUrl, setEditDrawingUrl] = useState<string | null>(null);
+  const [docUpdateError, setDocUpdateError] = useState<string | null>(null);
+
+  const openDocEditDialog = () => {
+    setEditSitePlanUrl(project?.sitePlanUrl || null);
+    setEditDrawingUrl(project?.drawingUrl || null);
+    setDocUpdateError(null);
+    setIsEditDocDialogOpen(true);
+  };
+
+  const updateDocsMutation = useMutation({
+    mutationFn: async () => {
+      setDocUpdateError(null);
+      const res = await fetch(`/api/projects/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sitePlanUrl: editSitePlanUrl,
+          drawingUrl: editDrawingUrl,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Gagal memperbarui dokumen");
+      }
+      return json.data;
+    },
+    onSuccess: () => {
+      setIsEditDocDialogOpen(false);
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["project-detail", params.id] });
+    },
+    onError: (err: Error) => {
+      setDocUpdateError(err.message);
+    },
+  });
 
   // Mutasi Transisi Status Proyek
   const transitionMutation = useMutation({
@@ -602,6 +649,99 @@ export default function ProjectDetailPage({
                         </p>
                       </div>
                     </div>
+
+                    {/* Card Dokumen & Gambar Teknis */}
+                    <div className="rounded-md border p-4 space-y-3 bg-muted/10">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-foreground text-xs flex items-center gap-1.5">
+                          <FileText className="h-4 w-4 text-primary" />
+                          Dokumen Perencanaan & Gambar Teknis (R2 Storage)
+                        </h4>
+                        {!isCompleted && !isCancelled && canManage && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1"
+                            onClick={openDocEditDialog}
+                          >
+                            <Upload className="h-3 w-3" />
+                            Unggah / Ubah Berkas
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                        {/* Site Plan Preview / Link */}
+                        <div className="rounded border bg-background p-3 space-y-2">
+                          <span className="text-[11px] font-medium text-muted-foreground block">
+                            Site Plan / Peta Denah:
+                          </span>
+                          {project.sitePlanUrl ? (
+                            <div className="space-y-2">
+                              {project.sitePlanUrl.match(/\.(jpeg|jpg|png|webp)($|\?)/i) ? (
+                                <div className="rounded overflow-hidden border aspect-video max-h-36 bg-muted/20">
+                                  {/* Native img tag - TANPA next/image optimizer sesuai aturan STACK.md §4 */}
+                                  <img
+                                    src={project.sitePlanUrl}
+                                    alt="Site Plan"
+                                    loading="lazy"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : null}
+                              <a
+                                href={project.sitePlanUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                Buka Dokumen Site Plan
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              Belum ada berkas Site Plan yang diunggah.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Drawing / DED Link */}
+                        <div className="rounded border bg-background p-3 space-y-2">
+                          <span className="text-[11px] font-medium text-muted-foreground block">
+                            Gambar Kerja Teknis (DED / Drawing):
+                          </span>
+                          {project.drawingUrl ? (
+                            <div className="space-y-2">
+                              {project.drawingUrl.match(/\.(jpeg|jpg|png|webp)($|\?)/i) ? (
+                                <div className="rounded overflow-hidden border aspect-video max-h-36 bg-muted/20">
+                                  {/* Native img tag - TANPA next/image optimizer sesuai aturan STACK.md §4 */}
+                                  <img
+                                    src={project.drawingUrl}
+                                    alt="Drawing"
+                                    loading="lazy"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : null}
+                              <a
+                                href={project.drawingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                Buka Gambar Kerja (DED)
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              Belum ada berkas Gambar Kerja yang diunggah.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -870,6 +1010,75 @@ export default function ProjectDetailPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog: Unggah / Ubah Dokumen Teknis Proyek */}
+      <Dialog open={isEditDocDialogOpen} onOpenChange={setIsEditDocDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold">
+              Unggah / Perbarui Dokumen Teknis
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Unggah berkas Site Plan dan Gambar Kerja (DED) langsung ke Cloudflare R2.
+            </DialogDescription>
+          </DialogHeader>
+
+          {docUpdateError && (
+            <div className="rounded-md bg-rose-50 p-2.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 flex items-center gap-2 border border-rose-200">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{docUpdateError}</span>
+            </div>
+          )}
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5 rounded-md border p-3 bg-muted/10">
+              <Label className="text-xs font-semibold">
+                Site Plan / Peta Denah
+              </Label>
+              <FileUploadButton
+                value={editSitePlanUrl}
+                onChange={setEditSitePlanUrl}
+                folder="projects"
+                accept="image/*,application/pdf"
+                label="Unggah Site Plan"
+              />
+            </div>
+
+            <div className="space-y-1.5 rounded-md border p-3 bg-muted/10">
+              <Label className="text-xs font-semibold">
+                Gambar Kerja Teknis (DED / Drawing)
+              </Label>
+              <FileUploadButton
+                value={editDrawingUrl}
+                onChange={setEditDrawingUrl}
+                folder="projects"
+                accept="image/*,application/pdf,.xlsx,.xls"
+                label="Unggah Gambar Kerja"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditDocDialogOpen(false)}
+              disabled={updateDocsMutation.isPending}
+              className="h-8 text-xs"
+            >
+              Batal
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => updateDocsMutation.mutate()}
+              disabled={updateDocsMutation.isPending}
+              className="h-8 text-xs font-semibold"
+            >
+              {updateDocsMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

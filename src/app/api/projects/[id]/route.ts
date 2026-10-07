@@ -6,6 +6,7 @@ import { requireRole, requireSession } from "@/server/auth-guard";
 import { getProjectCurrentWeek } from "@/server/services/progress.service";
 import { Prisma, ProjectStatus, Role } from "@prisma/client";
 import { NextRequest } from "next/server";
+import { z } from "zod";
 
 interface RouteParams {
   params: {
@@ -135,6 +136,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           targetEndDate: validatedData.targetEndDate,
           constructionPlanStartDate: validatedData.constructionPlanStartDate,
           constructionPlanEndDate: validatedData.constructionPlanEndDate,
+          sitePlanUrl: validatedData.sitePlanUrl || null,
+          drawingUrl: validatedData.drawingUrl || null,
           statusIndicator: updatedSla.indicator,
           boqItems: validatedData.boqItems
             ? (validatedData.boqItems as Prisma.InputJsonValue)
@@ -252,3 +255,63 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return handleApiError(error, "Gagal menghapus proyek");
   }
 }
+
+/**
+ * PATCH /api/projects/[id]
+ * Pembaruan parsial dokumen proyek (sitePlanUrl, drawingUrl)
+ */
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await requireRole(Role.SUPER_ADMIN, Role.WM_HO_SPECIALIST);
+
+    const existingProject = await prisma.project.findFirst({
+      where: { id: params.id, deletedAt: null },
+      select: { id: true, status: true },
+    });
+
+    if (!existingProject) {
+      throw new AppError("Proyek tidak ditemukan atau telah dihapus", 404);
+    }
+
+    if (existingProject.status === ProjectStatus.COMPLETED) {
+      throw new AppError("Proyek sudah selesai dan terkunci (read-only)", 409);
+    }
+    if (existingProject.status === ProjectStatus.CANCELLED) {
+      throw new AppError("Proyek telah dibatalkan dan tidak dapat diubah", 409);
+    }
+
+    const body = await request.json();
+    const patchSchema = z.object({
+      sitePlanUrl: z.string().nullable().optional(),
+      drawingUrl: z.string().nullable().optional(),
+    });
+    const validated = patchSchema.parse(body);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const proj = await tx.project.update({
+        where: { id: params.id },
+        data: {
+          ...(validated.sitePlanUrl !== undefined ? { sitePlanUrl: validated.sitePlanUrl } : {}),
+          ...(validated.drawingUrl !== undefined ? { drawingUrl: validated.drawingUrl } : {}),
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: session.user.id,
+          entity: "Project",
+          entityId: params.id,
+          action: "UPDATE",
+          diff: validated,
+        },
+      });
+
+      return proj;
+    });
+
+    return apiSuccess(updated);
+  } catch (error) {
+    return handleApiError(error, "Gagal memperbarui dokumen proyek");
+  }
+}
+

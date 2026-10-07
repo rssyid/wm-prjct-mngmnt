@@ -61,6 +61,8 @@ export const projectInputSchema = z
     targetEndDate: emptyDateToNull,
     constructionPlanStartDate: emptyDateToNull,
     constructionPlanEndDate: emptyDateToNull,
+    sitePlanUrl: emptyToNull,
+    drawingUrl: emptyToNull,
     boqItems: z.array(boqItemSchema).optional().nullable(),
   })
   .refine(

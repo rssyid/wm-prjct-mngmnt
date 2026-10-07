@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { BoqItem, BoqTemplateEditor } from "@/components/projects/boq-template-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -128,6 +129,8 @@ export default function NewProjectPage() {
       uom: "unit",
       latitude: null,
       longitude: null,
+      sitePlanUrl: null,
+      drawingUrl: null,
       boqItems: [],
     },
   });
@@ -651,6 +654,53 @@ export default function NewProjectPage() {
                       {errors.constructionPlanEndDate.message}
                     </p>
                   )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 5: Dokumen Perencanaan & Gambar Teknis */}
+          <Card className="border-border shadow-xs">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold">
+                5. Dokumen Perencanaan & Gambar Teknis
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Unggah berkas denah lokasi (Site Plan) dan gambar kerja teknis (DED) ke Cloudflare R2.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5 rounded-md border p-3.5 bg-muted/10">
+                  <Label className="text-xs font-semibold">
+                    Site Plan / Peta Denah Lokasi
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground pb-1">
+                    Berkas gambar atau PDF tata letak bangunan air.
+                  </p>
+                  <FileUploadButton
+                    value={watch("sitePlanUrl")}
+                    onChange={(url) => setValue("sitePlanUrl", url)}
+                    folder="projects"
+                    accept="image/*,application/pdf"
+                    label="Unggah Site Plan"
+                  />
+                </div>
+
+                <div className="space-y-1.5 rounded-md border p-3.5 bg-muted/10">
+                  <Label className="text-xs font-semibold">
+                    Gambar Kerja Teknis (DED / Drawing)
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground pb-1">
+                    Gambar konstruksi teknis, penulangan, atau kalkulasi struktur (PDF, Excel, Foto).
+                  </p>
+                  <FileUploadButton
+                    value={watch("drawingUrl")}
+                    onChange={(url) => setValue("drawingUrl", url)}
+                    folder="projects"
+                    accept="image/*,application/pdf,.xlsx,.xls"
+                    label="Unggah Gambar Kerja"
+                  />
                 </div>
               </div>
             </CardContent>

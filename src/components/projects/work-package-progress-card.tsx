@@ -1,8 +1,10 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MultiImageUpload } from "@/components/ui/multi-image-upload";
 import {
   Dialog,
   DialogContent,
@@ -40,10 +42,8 @@ import {
   Edit,
   History,
   Lock,
-  Plus,
   Trash2,
   Waves,
-  X,
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
@@ -121,7 +121,6 @@ export function WorkPackageProgressCard({
   const [waterLevelCm, setWaterLevelCm] = useState<string>("");
   const [workDescription, setWorkDescription] = useState<string>("");
   const [photos, setPhotos] = useState<string[]>([]);
-  const [newPhotoUrl, setNewPhotoUrl] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
 
   // Edit dialog state
@@ -134,7 +133,6 @@ export function WorkPackageProgressCard({
   const [editWaterLevel, setEditWaterLevel] = useState<string>("");
   const [editDescription, setEditDescription] = useState<string>("");
   const [editPhotos, setEditPhotos] = useState<string[]>([]);
-  const [editNewPhotoUrl, setEditNewPhotoUrl] = useState<string>("");
   const [editError, setEditError] = useState<string | null>(null);
 
   // Delete dialog state
@@ -144,28 +142,6 @@ export function WorkPackageProgressCard({
   const isSelectedWeekExisting = useMemo(() => {
     return packageLogs.some((l) => l.weekNo === selectedWeek);
   }, [packageLogs, selectedWeek]);
-
-  // Tambah link foto
-  const handleAddPhoto = () => {
-    if (!newPhotoUrl.trim()) return;
-    setPhotos([...photos, newPhotoUrl.trim()]);
-    setNewPhotoUrl("");
-  };
-
-  const handleRemovePhoto = (index: number) => {
-    setPhotos(photos.filter((_, i) => i !== index));
-  };
-
-  // Tambah link foto pada dialog edit
-  const handleAddEditPhoto = () => {
-    if (!editNewPhotoUrl.trim()) return;
-    setEditPhotos([...editPhotos, editNewPhotoUrl.trim()]);
-    setEditNewPhotoUrl("");
-  };
-
-  const handleRemoveEditPhoto = (index: number) => {
-    setEditPhotos(editPhotos.filter((_, i) => i !== index));
-  };
 
   // Mutation: Simpan Log Baru
   const createMutation = useMutation({
@@ -503,50 +479,18 @@ export function WorkPackageProgressCard({
               </div>
             </div>
 
-            {/* Foto URL Input */}
+            {/* Foto Upload R2 */}
             <div className="space-y-2 pt-1 border-t border-border/60">
               <Label className="text-xs flex items-center gap-1.5">
                 <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-                Foto Dokumentasi Lapangan (URL)
+                Foto Dokumentasi Lapangan (Upload R2)
               </Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newPhotoUrl}
-                  onChange={(e) => setNewPhotoUrl(e.target.value)}
-                  placeholder="https://... (URL foto dokumentasi)"
-                  className="h-8 text-xs"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddPhoto}
-                  className="h-8 text-xs shrink-0"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Tambah URL
-                </Button>
-              </div>
-
-              {photos.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {photos.map((url, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-1 text-[11px] bg-muted px-2 py-0.5 rounded-md border text-foreground"
-                    >
-                      <span className="truncate max-w-[200px]">{url}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(idx)}
-                        className="text-muted-foreground hover:text-rose-500"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <MultiImageUpload
+                values={photos}
+                onChange={setPhotos}
+                folder="progress"
+                disabled={createMutation.isPending || isSelectedWeekExisting}
+              />
             </div>
 
             <div className="flex justify-end pt-2">
@@ -656,9 +600,31 @@ export function WorkPackageProgressCard({
                         </TableCell>
                         <TableCell className="py-2.5 text-xs">
                           {Array.isArray(log.photos) && log.photos.length > 0 ? (
-                            <span className="text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded border">
-                              {log.photos.length} Foto
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {log.photos.slice(0, 3).map((photoUrl, pIdx) => (
+                                <a
+                                  key={pIdx}
+                                  href={photoUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Buka foto dokumentasi"
+                                  className="block h-7 w-7 rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary/50 transition-all shrink-0 bg-muted/30"
+                                >
+                                  {/* Native img tag - TANPA next/image optimizer sesuai aturan STACK.md §4 */}
+                                  <img
+                                    src={photoUrl}
+                                    alt={`Foto ${pIdx + 1}`}
+                                    loading="lazy"
+                                    className="h-full w-full object-cover"
+                                  />
+                                </a>
+                              ))}
+                              {log.photos.length > 3 && (
+                                <span className="text-[10px] font-mono bg-muted text-muted-foreground px-1 py-0.5 rounded border">
+                                  +{log.photos.length - 3}
+                                </span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
@@ -814,43 +780,13 @@ export function WorkPackageProgressCard({
             </div>
 
             <div className="space-y-1.5 pt-1 border-t">
-              <Label className="text-xs">URL Foto Dokumentasi</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={editNewPhotoUrl}
-                  onChange={(e) => setEditNewPhotoUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="h-8 text-xs"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddEditPhoto}
-                  className="h-8 text-xs"
-                >
-                  Tambah
-                </Button>
-              </div>
-              {editPhotos.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {editPhotos.map((url, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-1 text-[10px] bg-muted px-2 py-0.5 rounded border"
-                    >
-                      <span className="truncate max-w-[180px]">{url}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveEditPhoto(idx)}
-                        className="text-muted-foreground hover:text-rose-500"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Label className="text-xs">Foto Dokumentasi Lapangan (Upload R2)</Label>
+              <MultiImageUpload
+                values={editPhotos}
+                onChange={setEditPhotos}
+                folder="progress"
+                disabled={updateMutation.isPending}
+              />
             </div>
           </div>
 

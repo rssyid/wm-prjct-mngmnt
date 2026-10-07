@@ -23,13 +23,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import { ProjectStatus, Role } from "@prisma/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  ExternalLink,
   FileCheck,
   FileText,
   Lock,
@@ -460,32 +460,18 @@ export function BastTab({
 
           {/* Berkas Lampiran BAST */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="bastFileUrl" className="text-xs font-semibold">
-                Tautan Berkas Lampiran BAST <span className="text-rose-500">*</span>
-              </Label>
-              {bastFileUrl && (
-                <a
-                  href={bastFileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
-                >
-                  <ExternalLink className="h-3 w-3" /> Buka Tautan Berkas
-                </a>
-              )}
-            </div>
-            <Input
-              id="bastFileUrl"
-              placeholder="Contoh: https://r2.storage.wm/bast/dokumen-serah-terima-2026.pdf"
+            <Label className="text-xs font-semibold">
+              Berkas Lampiran BAST Asli (PDF / Scan Dokumen) <span className="text-rose-500">*</span>
+            </Label>
+            <FileUploadButton
               value={bastFileUrl}
-              onChange={(e) => setBastFileUrl(e.target.value)}
+              onChange={(url) => setBastFileUrl(url || "")}
+              folder="bast"
+              accept="application/pdf,image/*"
               disabled={!canEdit}
-              className="text-xs h-9 font-mono"
+              label="Unggah Berkas BAST"
+              description="Wajib diunggah sebelum pengajuan BAST (T7). Disimpan di Cloudflare R2."
             />
-            <p className="text-[11px] text-muted-foreground">
-              Wajib terisi sebelum pengajuan BAST (T7). Unggah berkas asli langsung via presigned URL R2 dijadwalkan pada Phase C (P9).
-            </p>
           </div>
 
           {/* Catatan BAST */}

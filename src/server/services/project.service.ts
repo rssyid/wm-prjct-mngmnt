@@ -32,6 +32,8 @@ export interface CreateProjectInput {
   targetEndDate?: Date | string | null;
   constructionPlanStartDate?: Date | string | null;
   constructionPlanEndDate?: Date | string | null;
+  sitePlanUrl?: string | null;
+  drawingUrl?: string | null;
   boqItems?: Prisma.InputJsonValue | null;
   year?: number;
 }
@@ -139,6 +141,8 @@ export async function createProject(
         constructionPlanEndDate: data.constructionPlanEndDate
           ? new Date(data.constructionPlanEndDate)
           : null,
+        sitePlanUrl: data.sitePlanUrl || null,
+        drawingUrl: data.drawingUrl || null,
         boqItems: data.boqItems ? (data.boqItems as Prisma.InputJsonValue) : Prisma.JsonNull,
         progressPct: 0,
         status: ProjectStatus.DRAFT,

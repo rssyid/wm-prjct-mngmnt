@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   PackageCreateInput,
   PackageDeliveryInput,
+  PackageDocumentInput,
   PackagePaymentInput,
   PackageUpdateInput,
 } from "@/lib/validations/package.schema";
@@ -157,6 +158,10 @@ export async function getPackageById(projectId: string, packageId: string) {
             },
           },
         },
+      },
+      documents: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: "desc" },
       },
     },
   });
@@ -887,3 +892,122 @@ export async function listPackageDeliveries(
 
   return deliveries;
 }
+
+/**
+ * Mengambil daftar berkas dokumen untuk paket tertentu (PR, PO, DO, Invoice, etc)
+ */
+export async function listPackageDocuments(workPackageId: string) {
+  return prisma.packageDocument.findMany({
+    where: {
+      workPackageId,
+      deletedAt: null,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Menambahkan dokumen baru ke paket kerja
+ */
+export async function createPackageDocument(
+  workPackageId: string,
+  data: PackageDocumentInput,
+  userId: string
+) {
+  const pkg = await prisma.workPackage.findUnique({
+    where: { id: workPackageId, deletedAt: null },
+    include: { project: { select: { id: true, status: true } } },
+  });
+
+  if (!pkg) {
+    throw new AppError("Paket kerja tidak ditemukan atau telah dihapus", 404);
+  }
+
+  if (pkg.project.status === ProjectStatus.COMPLETED) {
+    throw new AppError("Proyek sudah selesai dan terkunci (read-only)", 409);
+  }
+  if (pkg.project.status === ProjectStatus.CANCELLED) {
+    throw new AppError("Proyek telah dibatalkan", 409);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const doc = await tx.packageDocument.create({
+      data: {
+        workPackageId,
+        docType: data.docType,
+        docNumber: data.docNumber || null,
+        docDate: data.docDate ? new Date(data.docDate) : null,
+        fileUrl: data.fileUrl,
+        notes: data.notes || null,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        entity: "PackageDocument",
+        entityId: doc.id,
+        action: "CREATE",
+        diff: {
+          workPackageId,
+          docType: doc.docType,
+          docNumber: doc.docNumber,
+          fileUrl: doc.fileUrl,
+        },
+      },
+    });
+
+    return doc;
+  });
+}
+
+/**
+ * Soft delete dokumen paket kerja
+ */
+export async function deletePackageDocument(
+  packageDocId: string,
+  userId: string
+) {
+  const doc = await prisma.packageDocument.findUnique({
+    where: { id: packageDocId, deletedAt: null },
+    include: {
+      workPackage: {
+        include: { project: { select: { id: true, status: true } } },
+      },
+    },
+  });
+
+  if (!doc) {
+    throw new AppError("Dokumen tidak ditemukan atau sudah dihapus", 404);
+  }
+
+  if (doc.workPackage.project.status === ProjectStatus.COMPLETED) {
+    throw new AppError("Proyek sudah selesai dan terkunci (read-only)", 409);
+  }
+  if (doc.workPackage.project.status === ProjectStatus.CANCELLED) {
+    throw new AppError("Proyek telah dibatalkan", 409);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.packageDocument.update({
+      where: { id: packageDocId },
+      data: { deletedAt: new Date() },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        entity: "PackageDocument",
+        entityId: packageDocId,
+        action: "DELETE",
+        diff: {
+          workPackageId: doc.workPackageId,
+          deletedAt: updated.deletedAt?.toISOString(),
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+

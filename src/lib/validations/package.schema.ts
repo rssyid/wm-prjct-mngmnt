@@ -1,4 +1,4 @@
-import { PackageCategory, PaymentStatus } from "@prisma/client";
+import { PackageCategory, PackageDocType, PaymentStatus } from "@prisma/client";
 import { z } from "zod";
 
 // Helper untuk normalisasi input
@@ -199,3 +199,18 @@ export const packagePaymentInputSchema = z.object({
 });
 
 export type PackagePaymentInput = z.infer<typeof packagePaymentInputSchema>;
+
+/**
+ * Validasi penambahan dokumen paket pengadaan (PR, PO, DO, INVOICE, OTHER)
+ */
+export const packageDocumentInputSchema = z.object({
+  docType: z.nativeEnum(PackageDocType, {
+    required_error: "Tipe dokumen wajib dipilih",
+  }),
+  docNumber: emptyToNull.optional(),
+  docDate: emptyDateToNull.optional(),
+  fileUrl: z.string().trim().min(1, "URL berkas wajib diisi"),
+  notes: emptyToNull.optional(),
+});
+
+export type PackageDocumentInput = z.infer<typeof packageDocumentInputSchema>;
