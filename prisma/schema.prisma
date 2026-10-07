@@ -1,0 +1,710 @@
+// =============================================================================
+// WM PRJCT MNGMNT — Prisma Schema
+// Sumber kebenaran: docs/DATABASE.md v2.1 (+ keputusan Q1–Q3 sesi 07/10/2026)
+// - Uang: Decimal(18,2) · Qty item: Decimal(18,3) · Persen/volume: Float
+// - Project.status HANYA diubah via src/server/services/project-transition.service.ts
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// 1. Enum
+// -----------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  WM_HO_SPECIALIST
+  MANAGEMENT_VIEWER
+}
+
+enum ProjectStatus {
+  DRAFT
+  SURVEY
+  RAB_READY
+  WAITING_AFCE_AR
+  AFCE_AR_APPROVED
+  PROCUREMENT
+  EXECUTION
+  WAITING_BAST
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum StatusIndicator {
+  ON_TRACK
+  AT_RISK
+  DELAYED
+  COMPLETED
+}
+
+enum BudgetType {
+  CAPEX_BUDGETED
+  OPEX_BUDGETED
+  PTA
+  UNBUDGETED
+}
+
+enum LocationType {
+  POINT
+  LINE
+  POLYGON
+}
+
+enum PackageCategory {
+  MATERIAL
+  FABRICATION
+  CONTRACTOR
+  HEAVY_EQUIPMENT
+  SWAKELOLA
+}
+
+enum PackageStatus {
+  DRAFT
+  PR_SUBMITTED
+  PO_ISSUED
+  IN_DELIVERY
+  PARTIALLY_DELIVERED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum AfceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalStatus {
+  WAITING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalDocType {
+  AR
+  PR
+  PO
+}
+
+enum PackageDocType {
+  PR
+  PO
+  DO
+  INVOICE
+  OTHER
+}
+
+enum PaymentStatus {
+  BELUM_LUNAS
+  DALAM_PROSES
+  LUNAS
+}
+
+enum EquipmentOwnership {
+  OWNED
+  RENTAL
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  PURGE
+  TRANSITION
+  LOGIN_FAILED
+}
+
+// -----------------------------------------------------------------------------
+// 2. User
+// -----------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique // selalu disimpan lowercase
+  name          String
+  password      String // hash bcrypt
+  role          Role     @default(WM_HO_SPECIALIST)
+  isActive      Boolean  @default(true)
+  rememberToken String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  projectsCreated     Project[]      @relation("ProjectCreatedBy")
+  workPackagesCreated WorkPackage[]  @relation("WorkPackageCreatedBy")
+  progressLogsCreated ProgressLog[]  @relation("ProgressLogCreatedBy")
+  bastVerified        BastDocument[] @relation("BastVerifiedBy")
+  auditLogs           AuditLog[]
+
+  @@index([isActive])
+}
+
+// -----------------------------------------------------------------------------
+// 3. Master Data
+// -----------------------------------------------------------------------------
+
+model Region {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companies Company[]
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  regionId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  region       Region?              @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  estates      Estate[]
+  projects     Project[]
+  codeCounters ProjectCodeCounter[]
+
+  @@index([regionId])
+}
+
+model Estate {
+  id        String   @id @default(cuid())
+  companyId String
+  code      String
+  name      String
+  region    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  blocks   Block[]
+  projects Project[]
+
+  @@unique([companyId, code])
+}
+
+model Block {
+  id           String   @id @default(cuid())
+  estateId     String
+  blockCode    String
+  name         String
+  plantingYear Int?
+  areaHectares Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  estate   Estate    @relation(fields: [estateId], references: [id], onDelete: Cascade)
+  projects Project[]
+
+  @@unique([estateId, blockCode])
+}
+
+model FolderCategory {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projects Project[]
+}
+
+model StructureType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variants StructureVariant[]
+  projects Project[]
+}
+
+model StructureVariant {
+  id              String   @id @default(cuid())
+  structureTypeId String
+  code            String
+  name            String
+  description     String?
+  defaultBoqItems Json? // template BOQ: [{ itemCode, name, uom, qty }]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  structureType StructureType @relation(fields: [structureTypeId], references: [id], onDelete: Cascade)
+  projects      Project[]
+
+  @@unique([structureTypeId, code])
+}
+
+model Vendor {
+  id            String          @id @default(cuid())
+  name          String
+  category      PackageCategory
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  workPackages WorkPackage[]
+}
+
+model UnitOfMeasurement {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items Item[]
+}
+
+/// Wajib di-seed per tahun (WORKFLOW.md §4). Tanpa data tahun berjalan → SLA fallback 7 hari.
+model Holiday {
+  id          String   @id @default(cuid())
+  holidayDate DateTime @unique @db.Date
+  name        String
+  year        Int
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([year])
+}
+
+model PicOfficer {
+  id         String   @id @default(cuid())
+  name       String
+  roleTitle  String?
+  phone      String?
+  email      String?
+  companyIds Json?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  projects Project[]
+}
+
+/// Master Material
+model Item {
+  id            String          @id @default(cuid())
+  itemCode      String          @unique
+  name          String
+  category      PackageCategory @default(MATERIAL)
+  uomId         String
+  specification String?
+  standardPrice Decimal         @default(0) @db.Decimal(18, 2)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  uom          UnitOfMeasurement @relation(fields: [uomId], references: [id], onDelete: Restrict)
+  packageItems PackageItem[]
+
+  @@index([uomId])
+}
+
+// -----------------------------------------------------------------------------
+// 4. Project
+// -----------------------------------------------------------------------------
+
+model Project {
+  id                        String          @id @default(cuid())
+  projectCode               String          @unique // WM-{COMPANY}-{YYYY}-{SEQ4} (B10)
+  projectName               String
+  displayName               String
+  folderCategoryId          String
+  structureTypeId           String
+  companyId                 String
+  estateId                  String
+  structureVariantId        String?
+  blockId                   String?
+  picId                     String?
+  picName                   String? // denormalisasi dari PicOfficer
+  latitude                  Float?
+  longitude                 Float?
+  geoCoordinates            Json? // polyline/polygon
+  locationType              LocationType    @default(POINT)
+  budgetType                BudgetType      @default(CAPEX_BUDGETED)
+  totalBudgetAmount         Decimal         @default(0) @db.Decimal(18, 2)
+  targetQuantity            Float?
+  uom                       String?
+  targetStartDate           DateTime?
+  targetEndDate             DateTime?
+  constructionPlanStartDate DateTime?
+  constructionPlanEndDate   DateTime?
+  revisedEndDate            DateTime?
+  estCompletionDate         DateTime?
+  /// Agregat Σ(progressPct × weightPct / 100) — dihitung ulang di service dalam transaksi (Q1)
+  progressPct               Float           @default(0)
+  /// Hanya berubah via project-transition.service.ts
+  status                    ProjectStatus   @default(DRAFT)
+  statusBeforeHold          ProjectStatus? // untuk RESUME (T9)
+  statusIndicator           StatusIndicator @default(ON_TRACK)
+  onHoldReason              String?
+  cancellationReason        String?
+  sitePlanUrl               String?
+  drawingUrl                String?
+  boqItems                  Json?
+  surveyElevationData       Json?
+  socializationSignOff      Json?
+  createdById               String?
+  deletedAt                 DateTime?
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+
+  folderCategory     FolderCategory      @relation(fields: [folderCategoryId], references: [id], onDelete: Restrict)
+  structureType      StructureType       @relation(fields: [structureTypeId], references: [id], onDelete: Restrict)
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  estate             Estate              @relation(fields: [estateId], references: [id], onDelete: Restrict)
+  structureVariant   StructureVariant?   @relation(fields: [structureVariantId], references: [id], onDelete: SetNull)
+  block              Block?              @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  pic                PicOfficer?         @relation(fields: [picId], references: [id], onDelete: SetNull)
+  createdBy          User?               @relation("ProjectCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  afceDocument       AfceDocument?
+  supplementaryArs   SupplementaryAr[]
+  workPackages       WorkPackage[]
+  progressLogs       ProgressLog[]
+  heavyEquipmentLogs HeavyEquipmentLog[]
+  bastDocument       BastDocument?
+
+  @@index([status])
+  @@index([statusIndicator])
+  @@index([companyId])
+  @@index([estateId])
+  @@index([deletedAt])
+  @@index([updatedAt])
+}
+
+/// Counter kode proyek per company per tahun (B10) — upsert+increment di dalam transaksi create Project.
+model ProjectCodeCounter {
+  id        String   @id @default(cuid())
+  companyId String
+  year      Int
+  lastSeq   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, year])
+}
+
+// -----------------------------------------------------------------------------
+// 5. AFCE / AR
+// -----------------------------------------------------------------------------
+
+model AfceDocument {
+  id                  String     @id @default(cuid())
+  projectId           String     @unique
+  /// Opsional saat draft otomatis (T2); wajib via Zod saat emailSubmitted = true (Q2)
+  noAr                String?
+  arType              String?
+  budgetType          String?
+  approvedAmount      Decimal    @default(0) @db.Decimal(18, 2)
+  drawingReady        Boolean    @default(false)
+  rabReady            Boolean    @default(false) // memicu T2
+  mapReady            Boolean    @default(false)
+  emailSubmitted      Boolean    @default(false) // memicu T3
+  emailSubmittedDate  DateTime?
+  isSupplementary     Boolean    @default(false)
+  supplementaryAmount Decimal?   @db.Decimal(18, 2)
+  mcaApprovalDate     DateTime?
+  currentAttempt      Int        @default(1) // +1 setiap resubmit (B4)
+  status              AfceStatus @default(PENDING)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvals ApprovalSnapshot[]
+}
+
+/// AR tambahan — paralel, TIDAK mengubah status proyek (B5)
+model SupplementaryAr {
+  id        String     @id @default(cuid())
+  projectId String
+  noAr      String
+  amount    Decimal    @db.Decimal(18, 2)
+  notes     String?
+  status    AfceStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+/// History attempt lama TIDAK pernah dihapus/diubah (B4). Paraf terpusat tanpa FK User (B1).
+model ApprovalSnapshot {
+  id             String          @id @default(cuid())
+  afceDocumentId String?
+  workPackageId  String?
+  attemptNo      Int             @default(1)
+  documentType   ApprovalDocType
+  approvalLevel  Int // berurutan ketat (B2)
+  role           String
+  personName     String?
+  status         ApprovalStatus  @default(WAITING)
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+  rejectedAt     DateTime?
+  notes          String?
+  evidenceDocUrl String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  afceDocument AfceDocument? @relation(fields: [afceDocumentId], references: [id], onDelete: Cascade)
+  workPackage  WorkPackage?  @relation(fields: [workPackageId], references: [id], onDelete: Cascade)
+
+  @@index([afceDocumentId, attemptNo])
+  @@index([workPackageId])
+}
+
+// -----------------------------------------------------------------------------
+// 6. Pengadaan
+// -----------------------------------------------------------------------------
+
+model WorkPackage {
+  id                 String          @id @default(cuid())
+  projectId          String
+  packageName        String
+  category           PackageCategory @default(MATERIAL)
+  vendorId           String?
+  vendorName         String? // denormalisasi
+  picName            String?
+  weightPct          Float           @default(0) // Σ per proyek = 100
+  progressPct        Float           @default(0)
+  targetQuantity     Float?
+  uom                String?
+  volumeAchieved     Float?
+  noPrUspk           String?
+  prUspkDate         DateTime?
+  noPoSpk            String?
+  poSpkDate          DateTime?
+  contractOrPoAmount Decimal         @default(0) @db.Decimal(18, 2)
+  estDeliveryDate    DateTime?
+  /// Cache tanggal kiriman TERAKHIR (otomatis dari PackageDelivery)
+  actualDeliveryDate DateTime?
+  paymentStatus      PaymentStatus   @default(BELUM_LUNAS)
+  paidAmount         Decimal?        @db.Decimal(18, 2)
+  paidDate           DateTime?
+  planStartDate      DateTime?
+  planEndDate        DateTime?
+  actualStartDate    DateTime?
+  actualEndDate      DateTime?
+  status             PackageStatus   @default(DRAFT)
+  remarks            String? // juga alasan override DELIVERED manual
+  createdById        String?
+  deletedAt          DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vendor             Vendor?             @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  createdBy          User?               @relation("WorkPackageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  approvals          ApprovalSnapshot[]
+  items              PackageItem[]
+  deliveries         PackageDelivery[]
+  documents          PackageDocument[]
+  progressLogs       ProgressLog[]
+  heavyEquipmentLogs HeavyEquipmentLog[]
+
+  @@index([projectId])
+  @@index([vendorId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model PackageItem {
+  id            String   @id @default(cuid())
+  workPackageId String
+  itemId        String
+  qtyPlanned    Decimal  @db.Decimal(18, 3)
+  /// Akumulasi otomatis dari PackageDeliveryItem
+  qtyReceived   Decimal  @default(0) @db.Decimal(18, 3)
+  unitPrice     Decimal  @db.Decimal(18, 2)
+  totalPrice    Decimal  @db.Decimal(18, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workPackage   WorkPackage           @relation(fields: [workPackageId], references: [id], onDelete: Cascade)
+  item          Item                  @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  deliveryItems PackageDeliveryItem[]
+
+  @@index([workPackageId])
+  @@index([itemId])
+}
+
+/// Kiriman berulang (B7)
+model PackageDelivery {
+  id              String    @id @default(cuid())
+  workPackageId   String
+  deliveryDate    DateTime
+  deliveryOrderNo String?
+  notes           String? // kerusakan/kurang dicatat di sini
+  deletedAt       DateTime? // soft delete berantai (B11, Q3)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workPackage WorkPackage           @relation(fields: [workPackageId], references: [id], onDelete: Cascade)
+  items       PackageDeliveryItem[]
+
+  @@index([workPackageId])
+}
+
+model PackageDeliveryItem {
+  id                String   @id @default(cuid())
+  packageDeliveryId String
+  packageItemId     String
+  qtyReceived       Decimal  @db.Decimal(18, 3)
+  createdAt         DateTime @default(now())
+
+  packageDelivery PackageDelivery @relation(fields: [packageDeliveryId], references: [id], onDelete: Cascade)
+  packageItem     PackageItem     @relation(fields: [packageItemId], references: [id], onDelete: Restrict)
+
+  @@index([packageDeliveryId])
+  @@index([packageItemId])
+}
+
+model PackageDocument {
+  id            String         @id @default(cuid())
+  workPackageId String
+  docType       PackageDocType
+  docNumber     String?
+  docDate       DateTime?
+  fileUrl       String? // URL R2
+  notes         String?
+  deletedAt     DateTime? // soft delete berantai (B11, Q3)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  workPackage WorkPackage @relation(fields: [workPackageId], references: [id], onDelete: Cascade)
+
+  @@index([workPackageId])
+}
+
+// -----------------------------------------------------------------------------
+// 7. Realisasi
+// -----------------------------------------------------------------------------
+
+/// 1 log per paket per minggu (B6). Koreksi minggu berjalan = hard delete;
+/// deletedAt hanya untuk soft delete berantai proyek (B11, Q4).
+model ProgressLog {
+  id               String    @id @default(cuid())
+  projectId        String
+  workPackageId    String
+  logDate          DateTime  @default(now())
+  weekNo           Int
+  progressPct      Float // 0–100
+  volumeAchieved   Float?
+  volumeUnit       String?
+  workDescription  String?
+  weatherCondition String?
+  waterLevelCm     Float?
+  photos           Json? // array URL R2
+  createdById      String?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workPackage WorkPackage @relation(fields: [workPackageId], references: [id], onDelete: Cascade)
+  createdBy   User?       @relation("ProgressLogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([workPackageId, weekNo])
+  @@index([projectId])
+  @@index([workPackageId])
+}
+
+model HeavyEquipmentLog {
+  id              String             @id @default(cuid())
+  projectId       String
+  workPackageId   String?
+  logDate         DateTime
+  unitCode        String
+  equipmentType   String
+  ownership       EquipmentOwnership @default(OWNED)
+  hmStart         Float
+  hmEnd           Float
+  hmHours         Float // hmEnd − hmStart
+  fuelLiters      Float?
+  workVolume      Float?
+  volumeUnit      String?
+  workDescription String?
+  deletedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workPackage WorkPackage? @relation(fields: [workPackageId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([workPackageId])
+}
+
+/// verifiedAt terisi (SUPER_ADMIN saja) → proyek COMPLETED + read-only (T8, B9)
+model BastDocument {
+  id                String    @id @default(cuid())
+  projectId         String    @unique
+  bastNumber        String
+  bastDate          DateTime
+  hoInspectorName   String?
+  contractorRepName String?
+  notes             String?
+  bastFileUrl       String // URL R2, wajib sebelum T7
+  verifiedById      String?
+  verifiedAt        DateTime?
+  deletedAt         DateTime? // soft delete berantai (B11, Q3)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  verifiedBy User?   @relation("BastVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+}
+
+// -----------------------------------------------------------------------------
+// 8. Audit
+// -----------------------------------------------------------------------------
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  userId    String
+  entity    String
+  entityId  String
+  action    AuditAction
+  diff      Json?
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([entity, entityId])
+  @@index([userId])
+}

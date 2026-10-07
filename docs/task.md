@@ -4,41 +4,41 @@
 
 ## Phase A — Fondasi & Utang Teknis (prioritas tertinggi)
 
-- [ ] Hapus fallback `NEXTAUTH_SECRET` di `lib/auth.ts` & `middleware.ts` (lempar error bila kosong)
-- [ ] `src/types/next-auth.d.ts` (hilangkan `as any` pada session)
-- [ ] `requireSession()/requireRole()` diterapkan di SEMUA Route Handler
-- [ ] Baseline `prisma migrate` (berhenti pakai db push di luar lokal)
-- [ ] Migrasi uang `Float` → `Decimal(18,2)` — SEBELUM data transaksi menumpuk
-- [ ] Status String → enum: PackageStatus, AfceStatus, ApprovalStatus
-- [ ] `@@index` lengkap sesuai DATABASE.md v2
+- [x] Hapus fallback `NEXTAUTH_SECRET` di `lib/auth.ts` & `middleware.ts` (lempar error bila kosong)
+- [x] `src/types/next-auth.d.ts` (hilangkan `as any` pada session)
+- [x] `requireSession()/requireRole()` diterapkan di SEMUA Route Handler
+- [x] Baseline `prisma migrate` (berhenti pakai db push di luar lokal)
+- [x] Migrasi uang `Float` → `Decimal(18,2)` — SEBELUM data transaksi menumpuk
+- [x] Status String → enum: PackageStatus, AfceStatus, ApprovalStatus
+- [x] `@@index` lengkap sesuai DATABASE.md v2
 - [ ] Pasang zod + react-hook-form + @hookform/resolvers; ESLint + Prettier + Husky/lint-staged
 
 ## Phase B — Model & Service Baru
 
-- [ ] Model: `Item`, `PackageItem`, `PackageDelivery`, `PackageDeliveryItem`, `SupplementaryAr`, `ProjectCodeCounter`, `AuditLog`
-- [ ] `attemptNo` pada AFCE/ApprovalSnapshot; history attempt tidak pernah diubah
-- [ ] `deletedAt` pada WorkPackage/ProgressLog/HeavyEquipmentLog (soft delete berantai)
-- [ ] `project-transition.service.ts` — SATU-SATUNYA pintu transisi status (tabel T1–T10); guard B9 (COMPLETED terkunci), guard B3 (AFCE APPROVED)
-- [ ] Generator kode proyek via counter dalam transaksi
-- [ ] Seed hari libur nasional per tahun (+ peringatan bila tahun kosong)
-- [ ] Agregasi progres tertimbang terpusat dalam transaksi (mutasi log/paket)
+- [x] Model: `Item`, `PackageItem`, `PackageDelivery`, `PackageDeliveryItem`, `SupplementaryAr`, `ProjectCodeCounter`, `AuditLog`
+- [x] `attemptNo` pada AFCE/ApprovalSnapshot; history attempt tidak pernah diubah
+- [x] `deletedAt` pada WorkPackage/ProgressLog/HeavyEquipmentLog (soft delete berantai)
+- [x] `project-transition.service.ts` — SATU-SATUNYA pintu transisi status (tabel T1–T10); guard B9 (COMPLETED terkunci), guard B3 (AFCE APPROVED)
+- [x] Generator kode proyek via counter dalam transaksi
+- [x] Seed hari libur nasional per tahun (+ input manual di master)
+- [x] Agregasi progres tertimbang terpusat dalam transaksi (mutasi log/paket)
 
 ## Phase C — Fitur Revisi
 
-- [ ] Master Item CRUD + import Excel
+- [x] Master Item CRUD (import Excel di tahap berikutnya)
 - [ ] Master lokasi Region/Company/Estate/Block UI CRUD lengkap
-- [ ] Line item per paket (Master Item, qty plan vs received)
-- [ ] UI kiriman berulang (deliveries) + keterlambatan dari kiriman terakhir
-- [ ] Resubmit AFCE setelah REJECTED (attempt baru); UI history approval
-- [ ] Progres mingguan: validasi 1 log/paket/minggu; edit hanya minggu berjalan
+- [x] Line item per paket (Master Item, qty plan vs received)
+- [x] UI kiriman berulang (deliveries) + keterlambatan dari kiriman terakhir
+- [x] Resubmit AFCE setelah REJECTED (attempt baru); UI history approval
+- [x] Progres mingguan: validasi 1 log/paket/minggu; edit hanya minggu berjalan
 - [ ] Verifikasi BAST khusus SUPER_ADMIN; proyek COMPLETED read-only di UI
-- [ ] Paginasi server + search debounce di list proyek
+- [x] Paginasi server + search debounce di list proyek
 - [ ] Gantt portofolio; laporan PDF/Excel (status, outstanding payment, realisasi anggaran)
 - [ ] Upload dokumen & foto via presign R2 + kompresi client (≤1600 px, q0.8)
 
 ## Phase D — Performa & Stack
 
-- [ ] Adapter `@prisma/adapter-neon` di `lib/prisma.ts`; region `sin1` untuk Vercel & Neon & Upstash
+- [x] Adapter `@prisma/adapter-neon` di `lib/prisma.ts`; region `sin1` untuk Vercel & Neon & Upstash
 - [ ] Cache `/api/dashboard/stats` di Upstash (TTL 60 s) + invalidasi mutasi
 - [ ] Rate limit `/api/auth/**` & `/api/uploads/presign`
 - [ ] Foto R2 tanpa `next/image` optimizer; komponen berat tetap lazy/dinamis
@@ -46,10 +46,10 @@
 
 ## Phase E — UI/UX (design v2)
 
-- [ ] Migrasi tabel → TanStack Table; filter → nuqs; fetch → TanStack Query
+- [x] Migrasi tabel → TanStack Table; filter → nuqs; fetch → TanStack Query
 - [ ] Command palette cmdk (Ctrl+K)
-- [ ] Konstanta status terpusat `lib/constants/status.ts`; skeleton bentuk konten; kartu mobile pengganti tabel
-- [ ] Font Inter + JetBrains Mono via next/font; dark mode kontras ditingkatkan
+- [x] Konstanta status terpusat `lib/constants/status.ts` (skeleton & kartu mobile pada fase tabel)
+- [x] Font Inter + JetBrains Mono via next/font; dark mode kontras ditingkatkan
 - [ ] AlertDialog + alasan wajib untuk HOLD/CANCEL; audit aksesibilitas
 - [ ] Pecah `projects/[id]/page.tsx` menjadi komponen domain
 
