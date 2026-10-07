@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { calculateProjectSla } from "@/lib/sla";
 import {
   BudgetType,
   LocationType,
@@ -93,6 +94,20 @@ export async function createProject(
     const year = data.year || new Date().getFullYear();
     const projectCode = await generateProjectCode(tx, data.companyId, year);
 
+    const holidays = await tx.holiday.findMany({
+      select: { holidayDate: true },
+    });
+
+    const initialSla = calculateProjectSla({
+      status: ProjectStatus.DRAFT,
+      currentIndicator: StatusIndicator.ON_TRACK,
+      progressPct: 0,
+      targetStartDate: data.targetStartDate,
+      targetEndDate: data.targetEndDate,
+      holidays: holidays.map((h) => h.holidayDate),
+      asOfDate: new Date(),
+    });
+
     const project = await tx.project.create({
       data: {
         projectCode,
@@ -127,7 +142,7 @@ export async function createProject(
         boqItems: data.boqItems ? (data.boqItems as Prisma.InputJsonValue) : Prisma.JsonNull,
         progressPct: 0,
         status: ProjectStatus.DRAFT,
-        statusIndicator: StatusIndicator.ON_TRACK,
+        statusIndicator: initialSla.indicator,
         createdById: actorId,
       },
       include: {

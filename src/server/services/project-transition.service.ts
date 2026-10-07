@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
-import { Prisma, ProjectStatus, Role } from "@prisma/client";
+import { calculateProjectSla } from "@/lib/sla";
+import { Prisma, ProjectStatus, Role, StatusIndicator } from "@prisma/client";
 
 export type ManualTransitionAction =
   | "START_SURVEY"
@@ -59,6 +60,10 @@ async function applyTransitionInternal(params: InternalTransitionParams) {
         projectCode: true,
         status: true,
         statusBeforeHold: true,
+        statusIndicator: true,
+        progressPct: true,
+        targetStartDate: true,
+        targetEndDate: true,
         onHoldReason: true,
         cancellationReason: true,
         deletedAt: true,
@@ -85,11 +90,30 @@ async function applyTransitionInternal(params: InternalTransitionParams) {
 
     const previousStatus = project.status;
 
+    // Tentukan statusIndicator: jika COMPLETED jadi COMPLETED, jika RESUME re-kalkulasi SLA
+    let newIndicator = project.statusIndicator;
+    if (targetStatus === ProjectStatus.COMPLETED) {
+      newIndicator = StatusIndicator.COMPLETED;
+    } else if (targetStatus !== ProjectStatus.ON_HOLD && actionName.includes("RESUME")) {
+      const holidays = await client.holiday.findMany({ select: { holidayDate: true } });
+      const slaResult = calculateProjectSla({
+        status: targetStatus,
+        currentIndicator: project.statusIndicator,
+        progressPct: project.progressPct,
+        targetStartDate: project.targetStartDate,
+        targetEndDate: project.targetEndDate,
+        holidays: holidays.map((h) => h.holidayDate),
+        asOfDate: new Date(),
+      });
+      newIndicator = slaResult.indicator;
+    }
+
     // Update status proyek
     const updatedProject = await client.project.update({
       where: { id: projectId },
       data: {
         status: targetStatus,
+        statusIndicator: newIndicator,
         statusBeforeHold:
           statusBeforeHold !== undefined
             ? statusBeforeHold

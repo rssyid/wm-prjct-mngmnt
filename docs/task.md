@@ -22,6 +22,7 @@
 - [x] Generator kode proyek via counter dalam transaksi
 - [x] Seed hari libur nasional per tahun (+ input manual di master)
 - [x] Agregasi progres tertimbang terpusat dalam transaksi (mutasi log/paket)
+- [x] Kalkulasi SLA terpusat (`lib/sla.ts`: deviasi, hari kerja minus libur & Minggu) & sinkronisasi `Project.statusIndicator`
 
 ## Phase C — Fitur Revisi
 
@@ -33,6 +34,7 @@
 - [x] Progres mingguan: validasi 1 log/paket/minggu; edit hanya minggu berjalan
 - [x] Verifikasi BAST khusus SUPER_ADMIN; proyek COMPLETED read-only di UI
 - [x] Paginasi server + search debounce di list proyek
+- [x] Dashboard KPI & Early Warning System (EWS) UI auto-refresh 60s, skeleton, navbar badge terpadu
 - [ ] Gantt portofolio; laporan PDF/Excel (status, outstanding payment, realisasi anggaran)
 - [ ] Upload dokumen & foto via presign R2 + kompresi client (≤1600 px, q0.8)
 

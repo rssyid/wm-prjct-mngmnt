@@ -1,5 +1,6 @@
 import { AppError, apiSuccess, handleApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { calculateProjectSla } from "@/lib/sla";
 import { projectInputSchema } from "@/lib/validations/project.schema";
 import { requireRole, requireSession } from "@/server/auth-guard";
 import { getProjectCurrentWeek } from "@/server/services/progress.service";
@@ -71,7 +72,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const existingProject = await prisma.project.findFirst({
       where: { id: params.id, deletedAt: null },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        statusIndicator: true,
+        progressPct: true,
+      },
     });
 
     if (!existingProject) {
@@ -90,6 +96,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const validatedData = projectInputSchema.parse(body);
 
     const updated = await prisma.$transaction(async (tx) => {
+      const holidays = await tx.holiday.findMany({
+        select: { holidayDate: true },
+      });
+
+      const updatedSla = calculateProjectSla({
+        status: existingProject.status,
+        currentIndicator: existingProject.statusIndicator,
+        progressPct: existingProject.progressPct,
+        targetStartDate: validatedData.targetStartDate,
+        targetEndDate: validatedData.targetEndDate,
+        holidays: holidays.map((h) => h.holidayDate),
+        asOfDate: new Date(),
+      });
+
       const updatedProject = await tx.project.update({
         where: { id: params.id },
         data: {
@@ -115,6 +135,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           targetEndDate: validatedData.targetEndDate,
           constructionPlanStartDate: validatedData.constructionPlanStartDate,
           constructionPlanEndDate: validatedData.constructionPlanEndDate,
+          statusIndicator: updatedSla.indicator,
           boqItems: validatedData.boqItems
             ? (validatedData.boqItems as Prisma.InputJsonValue)
             : Prisma.JsonNull,

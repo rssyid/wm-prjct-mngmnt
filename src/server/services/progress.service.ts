@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { calculateProjectSla } from "@/lib/sla";
 import { Prisma, ProjectStatus } from "@prisma/client";
 
 /**
@@ -36,6 +37,7 @@ export function getProjectCurrentWeek(
  * Progres Proyek = Σ (wp.progressPct × wp.weightPct / 100)
  * Wajib dieksekusi di dalam transaksi database setiap kali terjadi mutasi
  * pada WorkPackage (bobot/progres) atau ProgressLog.
+ * Sekaligus menyinkronkan statusIndicator EWS melalui calculateProjectSla (Aturan SLA tunggal).
  */
 export async function recalculateProjectProgress(
   tx: Prisma.TransactionClient,
@@ -43,7 +45,14 @@ export async function recalculateProjectProgress(
 ): Promise<number> {
   const project = await tx.project.findUnique({
     where: { id: projectId },
-    select: { id: true, status: true, deletedAt: true },
+    select: {
+      id: true,
+      status: true,
+      statusIndicator: true,
+      targetStartDate: true,
+      targetEndDate: true,
+      deletedAt: true,
+    },
   });
 
   if (!project) {
@@ -83,10 +92,26 @@ export async function recalculateProjectProgress(
   // Pembulatan 2 desimal dan batasi rentang 0–100
   const normalizedProgress = Math.min(100, Math.max(0, Math.round(totalProgress * 100) / 100));
 
+  // Ambil hari libur untuk kalkulasi SLA terpusat
+  const holidays = await tx.holiday.findMany({
+    select: { holidayDate: true },
+  });
+
+  const slaResult = calculateProjectSla({
+    status: project.status,
+    currentIndicator: project.statusIndicator,
+    progressPct: normalizedProgress,
+    targetStartDate: project.targetStartDate,
+    targetEndDate: project.targetEndDate,
+    holidays: holidays.map((h) => h.holidayDate),
+    asOfDate: new Date(),
+  });
+
   await tx.project.update({
     where: { id: projectId },
     data: {
       progressPct: normalizedProgress,
+      statusIndicator: slaResult.indicator,
     },
   });
 

@@ -87,16 +87,29 @@ function NotificationBadge() {
     data: {
       rejectedArCount: number;
       waitingApprovalCount: number;
+      delayedProjectsCount: number;
+      atRiskProjectsCount: number;
       totalPendingNotifications: number;
     };
   }>({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
       const res = await fetch("/api/dashboard/stats");
-      if (!res.ok) return { success: false, data: { rejectedArCount: 0, waitingApprovalCount: 0, totalPendingNotifications: 0 } };
+      if (!res.ok) {
+        return {
+          success: false,
+          data: {
+            rejectedArCount: 0,
+            waitingApprovalCount: 0,
+            delayedProjectsCount: 0,
+            atRiskProjectsCount: 0,
+            totalPendingNotifications: 0,
+          },
+        };
+      }
       return res.json();
     },
-    refetchInterval: 30000,
+    refetchInterval: 60000,
   });
 
   const stats = data?.data;
@@ -109,7 +122,7 @@ function NotificationBadge() {
           variant="ghost"
           size="icon"
           className="relative text-muted-foreground hover:text-foreground h-9 w-9"
-          aria-label="Notifikasi Persetujuan"
+          aria-label="Notifikasi Persetujuan dan EWS"
         >
           <Bell className="h-5 w-5" />
           {count > 0 && (
@@ -119,9 +132,9 @@ function NotificationBadge() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
+      <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="font-semibold text-xs flex items-center justify-between">
-          <span>Notifikasi Persetujuan</span>
+          <span>Notifikasi & Early Warning</span>
           {count > 0 && (
             <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] py-0 px-1.5 dark:bg-rose-950/60 dark:text-rose-400">
               {count} Perlu Tindakan
@@ -131,17 +144,35 @@ function NotificationBadge() {
         <DropdownMenuSeparator />
         {count === 0 ? (
           <div className="p-4 text-center text-xs text-muted-foreground">
-            Tidak ada notifikasi tertunda saat ini.
+            Tidak ada notifikasi atau proyek terlambat saat ini.
           </div>
         ) : (
           <div className="space-y-1 py-1">
+            {stats && stats.delayedProjectsCount > 0 && (
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/projects?statusIndicator=DELAYED"
+                  className="flex items-start gap-2.5 p-2 text-xs cursor-pointer hover:bg-muted"
+                >
+                  <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-foreground">
+                      {stats.delayedProjectsCount} Proyek Terlambat (DELAYED)
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      EWS: Proyek melewati jadwal atau deviasi &gt; 25 poin
+                    </p>
+                  </div>
+                </Link>
+              </DropdownMenuItem>
+            )}
             {stats && stats.rejectedArCount > 0 && (
               <DropdownMenuItem asChild>
                 <Link
                   href="/projects"
                   className="flex items-start gap-2.5 p-2 text-xs cursor-pointer hover:bg-muted"
                 >
-                  <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
                     <p className="font-medium text-foreground">
                       {stats.rejectedArCount} AR Ditolak
