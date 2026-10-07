@@ -227,7 +227,9 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
             personName: a.personName || "",
             status: a.status,
             submittedAt: a.submittedAt,
-            approvedAt: a.approvedAt,
+            approvedAt: a.approvedAt
+              ? new Date(a.approvedAt).toISOString().split("T")[0]
+              : "",
             rejectedAt: a.rejectedAt,
             notes: a.notes || "",
             evidenceDocUrl: a.evidenceDocUrl || null,
@@ -292,7 +294,28 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
     value: unknown
   ) => {
     const updated = [...activeApprovals];
-    updated[index] = { ...updated[index], [field]: value };
+    const currentItem = updated[index];
+    if (field === "status") {
+      const nextStatus = value as ApprovalStatus;
+      if (nextStatus === ApprovalStatus.APPROVED && !currentItem.approvedAt) {
+        // Otomatis isi tanggal hari ini saat diset Approved bila belum ada tanggal
+        updated[index] = {
+          ...currentItem,
+          status: nextStatus,
+          approvedAt: new Date().toISOString().split("T")[0],
+        };
+      } else if (nextStatus === ApprovalStatus.WAITING) {
+        updated[index] = {
+          ...currentItem,
+          status: nextStatus,
+          approvedAt: "",
+        };
+      } else {
+        updated[index] = { ...currentItem, status: nextStatus };
+      }
+    } else {
+      updated[index] = { ...currentItem, [field]: value };
+    }
     setActiveApprovals(updated);
   };
 
@@ -345,6 +368,10 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
           role: a.role.trim(),
           personName: a.personName.trim() || null,
           status: a.status,
+          approvedAt:
+            a.status === ApprovalStatus.APPROVED && a.approvedAt
+              ? new Date(a.approvedAt).toISOString()
+              : null,
           notes: a.notes ? a.notes.trim() : null,
           evidenceDocUrl: a.evidenceDocUrl || null,
         })),
@@ -851,7 +878,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">
                           Jabatan / Role Approver
@@ -878,6 +905,21 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                           }
                           disabled={isCompletedOrCancelled}
                           placeholder="Nama approver (paraf manual)"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">
+                          Tanggal Paraf {item.status === "APPROVED" && <span className="text-primary">*</span>}
+                        </Label>
+                        <Input
+                          type="date"
+                          value={item.approvedAt || ""}
+                          onChange={(e) =>
+                            handleUpdateApprover(index, "approvedAt", e.target.value)
+                          }
+                          disabled={isCompletedOrCancelled}
                           className="h-8 text-xs"
                         />
                       </div>
@@ -1031,6 +1073,15 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                                 >
                                   <ExternalLink className="h-3 w-3" /> Berkas
                                 </a>
+                              )}
+                              {snap.approvedAt && (
+                                <span className="text-[11px] text-muted-foreground font-mono">
+                                  {new Date(snap.approvedAt).toLocaleDateString("id-ID", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </span>
                               )}
                               <Badge
                                 variant="outline"
