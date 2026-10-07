@@ -56,7 +56,7 @@ export function AppShell({ children, user }: AppShellProps) {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="flex h-dvh w-full overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden md:block h-full shrink-0">
         <Sidebar
@@ -89,7 +89,7 @@ export function AppShell({ children, user }: AppShellProps) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Navbar onMobileMenuToggle={handleMobileToggle} user={user} />
         <main className="flex-1 overflow-y-auto bg-background/50 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl animate-in fade-in-50 duration-200">

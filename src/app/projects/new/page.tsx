@@ -77,7 +77,7 @@ export default function NewProjectPage() {
   const { data: companiesData } = useQuery<{ success: boolean; data: HierarchyCompany[] }>({
     queryKey: ["master-companies-hierarchy"],
     queryFn: async () => {
-      const res = await fetch("/api/master?type=company");
+      const res = await fetch("/api/master?type=company&include=hierarchy");
       if (!res.ok) throw new Error("Gagal mengambil data perusahaan");
       return res.json();
     },

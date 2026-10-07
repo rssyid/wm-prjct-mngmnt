@@ -182,6 +182,7 @@ export async function GET(request: NextRequest) {
       }
 
       case "company": {
+        const withHierarchy = searchParams.get("include") === "hierarchy";
         const data = await prisma.company.findMany({
           where: {
             ...(regionId ? { regionId } : {}),
@@ -204,6 +205,24 @@ export async function GET(request: NextRequest) {
                 projects: true,
               },
             },
+            ...(withHierarchy
+              ? {
+                  estates: {
+                    where: { isActive: true },
+                    orderBy: { code: "asc" as const },
+                    select: {
+                      id: true,
+                      code: true,
+                      name: true,
+                      blocks: {
+                        where: { isActive: true },
+                        orderBy: { blockCode: "asc" as const },
+                        select: { id: true, blockCode: true, name: true },
+                      },
+                    },
+                  },
+                }
+              : {}),
           },
           orderBy: { code: "asc" },
         });
