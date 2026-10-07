@@ -4,7 +4,10 @@
 /node_modules
 /.pnp
 .pnp.js
+<<<<<<< HEAD
 .yarn/install-state.gz
+=======
+>>>>>>> 7f2cf2327810b29411405bcd5aadd9f499ffa2d3
 
 # testing
 /coverage
@@ -27,6 +30,10 @@ yarn-error.log*
 
 # local env files
 .env*.local
+<<<<<<< HEAD
+=======
+.env
+>>>>>>> 7f2cf2327810b29411405bcd5aadd9f499ffa2d3
 
 # vercel
 .vercel
