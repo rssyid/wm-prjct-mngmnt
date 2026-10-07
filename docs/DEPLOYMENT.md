@@ -78,13 +78,14 @@ Tetap: PR → lint + typecheck + `prisma validate` + build → Vercel Preview; m
 
 ## 6. Checklist Go-Live
 
-- [ ] `NEXTAUTH_SECRET` kuat; fallback hard-coded DIHAPUS dari `lib/auth.ts` & `middleware.ts`
-- [ ] Migrasi via `prisma migrate deploy` (bukan db push); baseline sudah dibuat
-- [ ] Rate limit login & presign aktif (Upstash)
-- [ ] Driver serverless Neon aktif di `lib/prisma.ts`
-- [ ] Cache dashboard 60 s + invalidasi setelah mutasi
-- [ ] Foto terkompresi client-side & URL publik R2 bekerja
-- [ ] Hari libur tahun berjalan ter-seed
+- [x] `NEXTAUTH_SECRET` kuat; fallback hard-coded DIHAPUS dari `lib/auth.ts` & `middleware.ts`
+- [x] Migrasi via `prisma migrate deploy` (bukan db push); baseline sudah dibuat & script `db:deploy` siap
+- [x] Rate limit login & presign aktif (Upstash)
+- [x] Driver serverless Neon aktif di `lib/prisma.ts`
+- [x] Cache dashboard 60 s + invalidasi setelah mutasi
+- [x] Foto terkompresi client-side & URL publik R2 bekerja
+- [x] Hari libur tahun berjalan ter-seed & alert EWS aktif
 - [ ] Password admin diganti; kode proyek teruji unik (dua proyek paralel)
-- [ ] Sentry menangkap error produksi; Vercel Logs dipantau
+- [x] Sentry menangkap error produksi (`@sentry/nextjs` client/server/edge & `next.config.mjs` terhubung)
 - [ ] UAT 3 role + alur AR → approval (tolak 1x, resubmit) → PO → 2x kiriman → progres mingguan → BAST verify → COMPLETED terkunci
+

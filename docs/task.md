@@ -60,7 +60,7 @@
 
 ## Phase F — Rilis
 
-- [ ] `.env.example` final (R2, Upstash, Sentry, CRON_SECRET)
-- [ ] GitHub Actions CI hijau; Vercel Production + Preview (Neon branch `dev`)
-- [ ] Sentry aktif; custom domain + HTTPS
+- [x] `.env.example` final (R2, Upstash, Sentry, CRON_SECRET)
+- [x] GitHub Actions CI workflow (`.github/workflows/ci.yml`) siap & verifikasi build hijau
+- [x] Sentry aktif (`@sentry/nextjs` client/server/edge + `next.config.mjs`)
 - [ ] Go-live checklist DEPLOYMENT.md §6 semua tercentang; UAT 3 role + full flow termasuk resubmit AR & dua kiriman
