@@ -68,6 +68,12 @@ interface MasterCategory {
   name: string;
 }
 
+interface MasterUom {
+  id: string;
+  code: string;
+  name: string;
+}
+
 export default function NewProjectPage() {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -101,9 +107,19 @@ export default function NewProjectPage() {
     },
   });
 
+  const { data: uomsData } = useQuery<{ success: boolean; data: MasterUom[] }>({
+    queryKey: ["master-uoms"],
+    queryFn: async () => {
+      const res = await fetch("/api/master?type=uom");
+      if (!res.ok) throw new Error("Gagal mengambil data satuan");
+      return res.json();
+    },
+  });
+
   const companies = companiesData?.data || [];
   const categories = categoriesData?.data || [];
   const structures = structuresData?.data || [];
+  const uoms = uomsData?.data || [];
 
   const {
     register,
@@ -610,7 +626,33 @@ export default function NewProjectPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Satuan (UoM)</Label>
-                  <Input {...register("uom")} placeholder="unit / m / m3" />
+                  <Select
+                    value={watch("uom") || "unit"}
+                    onValueChange={(val) => setValue("uom", val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Satuan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uoms.length > 0 ? (
+                        uoms.map((u) => (
+                          <SelectItem key={u.id} value={u.code}>
+                            {u.code} — {u.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="unit">unit — Unit / Buah</SelectItem>
+                          <SelectItem value="m">m — Meter</SelectItem>
+                          <SelectItem value="m3">m3 — Meter Kubik</SelectItem>
+                          <SelectItem value="ha">ha — Hektar</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {errors.uom && (
+                    <p className="text-[11px] text-rose-500">{errors.uom.message}</p>
+                  )}
                 </div>
               </div>
 

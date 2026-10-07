@@ -58,6 +58,21 @@ npm run dev
 1. **Neon:** project baru region **Singapore**; simpan pooled + direct URL; buat branch `dev` untuk Preview.
 2. **Upstash:** database gratis region Singapore; simpan REST URL + token.
 3. **Cloudflare R2:** bucket `wm-prjct-files`; aktifkan public access (atau Worker + custom domain); buat API token scope bucket.
+   - **CORS Policy (Wajib untuk upload langsung dari browser):** Di tab *Settings* bucket R2 -> *CORS Policy*, tambahkan rule:
+     ```json
+     [
+       {
+         "AllowedOrigins": [
+           "https://wm-prjct-mngmnt.vercel.app",
+           "http://localhost:3000"
+         ],
+         "AllowedMethods": ["GET", "PUT", "HEAD"],
+         "AllowedHeaders": ["*"],
+         "ExposeHeaders": ["ETag"],
+         "MaxAgeSeconds": 3600
+       }
+     ]
+     ```
 4. **Vercel:** import repo; Build Command `prisma generate && prisma migrate deploy && next build`; Node 20.x; region function `sin1`.
 5. Isi semua env untuk Production **dan** Preview (Preview memakai Neon branch `dev`).
 6. `vercel.json`: 1 cron harian (mis. `0 0 * * *` UTC ≈ 07:00 WIB) memanggil `/api/health` dengan header `Authorization: Bearer $CRON_SECRET` — memanaskan Neon sebelum jam kerja.

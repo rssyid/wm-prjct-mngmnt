@@ -19,6 +19,9 @@ export function getR2Client(): S3Client {
         accessKeyId,
         secretAccessKey,
       },
+      // Matikan kalkulasi checksum otomatis yang tidak didukung atau memicu penolakan CORS browser pada R2 presigned PUT
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     });
   }
 
