@@ -81,6 +81,7 @@ import {
 } from "lucide-react";
 import { getSession } from "next-auth/react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import React, { useState } from "react";
 
 interface ProjectDetailResponse {
@@ -136,6 +137,8 @@ export default function ProjectDetailPage({
 }: {
   params: { id: string };
 }) {
+  const routeParams = useParams();
+  const projectId = (routeParams?.id as string) || params?.id;
   const queryClient = useQueryClient();
 
   // Sesi Pengguna
@@ -158,15 +161,19 @@ export default function ProjectDetailPage({
 
   // Fetch Detail Proyek
   const { data, isLoading, error, refetch } = useQuery<ProjectDetailResponse>({
-    queryKey: ["project-detail", params.id],
+    queryKey: ["project-detail", projectId],
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${params.id}`);
+      if (!projectId) {
+        throw new Error("ID Proyek tidak valid");
+      }
+      const res = await fetch(`/api/projects/${projectId}`);
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Gagal mengambil data proyek");
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Gagal mengambil data proyek (HTTP ${res.status})`);
       }
       return res.json();
     },
+    enabled: Boolean(projectId),
   });
 
   const project = data?.data;
@@ -198,7 +205,7 @@ export default function ProjectDetailPage({
   const updateDocsMutation = useMutation({
     mutationFn: async () => {
       setDocUpdateError(null);
-      const res = await fetch(`/api/projects/${params.id}`, {
+      const res = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -215,7 +222,7 @@ export default function ProjectDetailPage({
     onSuccess: () => {
       setIsEditDocDialogOpen(false);
       refetch();
-      queryClient.invalidateQueries({ queryKey: ["project-detail", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["project-detail", projectId] });
     },
     onError: (err: Error) => {
       setDocUpdateError(err.message);
@@ -234,7 +241,7 @@ export default function ProjectDetailPage({
       remarks?: string;
     }) => {
       setTransitionError(null);
-      const res = await fetch(`/api/projects/${params.id}/transition`, {
+      const res = await fetch(`/api/projects/${projectId}/transition`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, reason, remarks }),
@@ -255,8 +262,8 @@ export default function ProjectDetailPage({
       setIsStartWorkConfirmOpen(false);
 
       refetch();
-      queryClient.invalidateQueries({ queryKey: ["project-detail", params.id] });
-      queryClient.invalidateQueries({ queryKey: ["bast-detail", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["project-detail", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["bast-detail", projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
     onError: (err: Error) => {
