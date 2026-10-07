@@ -65,6 +65,7 @@ interface DashboardStatsData {
   delayedProjectsCount: number;
   atRiskProjectsCount: number;
   onTrackProjectsCount: number;
+  holidaysThisYearCount?: number;
   totalPendingNotifications: number;
 }
 
@@ -178,6 +179,24 @@ export function DashboardClient({ user }: DashboardClientProps) {
       {isError && (
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/60 dark:text-rose-300">
           Gagal memuat statistik terkini. Sistem akan mencoba kembali secara otomatis dalam 60 detik.
+        </div>
+      )}
+
+      {/* Peringatan Kalender Libur Kosong */}
+      {!isLoading && stats && stats.holidaysThisYearCount === 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-200 text-sm">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <span className="font-semibold">Peringatan Kalender Kerja:</span> Master Hari Libur untuk tahun berjalan ({new Date().getFullYear()}) belum terdaftar di sistem. Perhitungan SLA hari kerja perkebunan membutuhkan data kalender libur.
+            </div>
+          </div>
+          <Button asChild size="sm" variant="outline" className="shrink-0 border-amber-300 dark:border-amber-800 bg-amber-100/50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 hover:bg-amber-200/50">
+            <Link href="/master?tab=holiday">
+              Isi Hari Libur
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Link>
+          </Button>
         </div>
       )}
 

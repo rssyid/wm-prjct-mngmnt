@@ -1,8 +1,7 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserManagementClient } from "@/components/users/user-management-client";
 import { authOptions } from "@/lib/auth";
-import { ShieldAlert, UserPlus, Users } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { getServerSession } from "next-auth";
 
 export const metadata = {
@@ -15,60 +14,21 @@ export default async function UsersPage() {
 
   return (
     <AppShell user={session?.user}>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              Manajemen Pengguna
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Kelola akun staf, hak akses peranan (Role), dan status keaktifan user.
-            </p>
+      {!isSuperAdmin ? (
+        <div className="space-y-4 max-w-xl mx-auto py-12 text-center">
+          <div className="h-16 w-16 mx-auto rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+            <ShieldAlert className="h-8 w-8" />
           </div>
-          {isSuperAdmin && (
-            <div>
-              <Button className="font-semibold shadow-xs">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Tambah Pengguna
-              </Button>
-            </div>
-          )}
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Akses Dibatasi (SUPER_ADMIN Saja)
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Halaman manajemen pengguna dan hak akses akun staf hanya dapat dibuka dan dimodifikasi oleh pengguna dengan peran <span className="font-mono font-bold text-foreground">SUPER_ADMIN</span>.
+          </p>
         </div>
-
-        {!isSuperAdmin && (
-          <div className="flex items-center space-x-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 text-sm">
-            <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <div>
-              Halaman ini memiliki proteksi ketat. Hanya pengguna dengan peran{" "}
-              <span className="font-mono font-bold">SUPER_ADMIN</span> yang memiliki hak mutasi data pengguna.
-            </div>
-          </div>
-        )}
-
-        <Card className="border-border shadow-xs">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              Daftar Pengguna Aktif
-            </CardTitle>
-            <CardDescription>
-              Tabel manajemen pengguna akan diimplementasikan pada tahap berikutnya.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="py-12">
-            <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <Users className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground">
-                Pengelolaan Akses Terpusat
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Tersedia 3 tingkat hak akses sesuai standar: <span className="font-medium text-foreground">SUPER_ADMIN</span>, <span className="font-medium text-foreground">WM_HO_SPECIALIST</span>, dan <span className="font-medium text-foreground">MANAGEMENT_VIEWER</span>.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      ) : (
+        <UserManagementClient currentUserId={session?.user?.id} />
+      )}
     </AppShell>
   );
 }

@@ -107,3 +107,83 @@ export const itemSchema = z.object({
 });
 
 export type ItemInput = z.infer<typeof itemSchema>;
+
+// 7. Master Lokasi (Region, Company, Estate, Block)
+export const regionSchema = z.object({
+  code: z
+    .string()
+    .min(1, "Kode region wajib diisi")
+    .max(20, "Kode region maksimal 20 karakter")
+    .transform((v) => v.trim().toUpperCase()),
+  name: z.string().min(1, "Nama region wajib diisi").transform((v) => v.trim()),
+  isActive: z.boolean().default(true),
+});
+
+export type RegionInput = z.infer<typeof regionSchema>;
+
+export const companySchema = z.object({
+  code: z
+    .string()
+    .min(1, "Kode perusahaan wajib diisi")
+    .max(20, "Kode perusahaan maksimal 20 karakter")
+    .transform((v) => v.trim().toUpperCase()),
+  name: z.string().min(1, "Nama perusahaan wajib diisi").transform((v) => v.trim()),
+  regionId: z.string().optional().nullable(),
+  isActive: z.boolean().default(true),
+});
+
+export type CompanyInput = z.infer<typeof companySchema>;
+
+export const estateSchema = z.object({
+  companyId: z.string().min(1, "Perusahaan wajib dipilih"),
+  code: z
+    .string()
+    .min(1, "Kode estate wajib diisi")
+    .max(20, "Kode estate maksimal 20 karakter")
+    .transform((v) => v.trim().toUpperCase()),
+  name: z.string().min(1, "Nama estate wajib diisi").transform((v) => v.trim()),
+  region: z.string().optional().nullable(),
+  isActive: z.boolean().default(true),
+});
+
+export type EstateInput = z.infer<typeof estateSchema>;
+
+export const blockSchema = z.object({
+  estateId: z.string().min(1, "Estate wajib dipilih"),
+  blockCode: z
+    .string()
+    .min(1, "Kode blok wajib diisi")
+    .max(20, "Kode blok maksimal 20 karakter")
+    .transform((v) => v.trim().toUpperCase()),
+  name: z.string().min(1, "Nama blok wajib diisi").transform((v) => v.trim()),
+  plantingYear: z.coerce.number().int().min(1950).max(2100).optional().nullable(),
+  areaHectares: z.coerce.number().min(0, "Luas hektar minimal 0").optional().nullable(),
+  isActive: z.boolean().default(true),
+});
+
+export type BlockInput = z.infer<typeof blockSchema>;
+
+// 8. Bulk Holiday & Excel Item Import Batch
+export const holidayBulkSchema = z.array(
+  z.object({
+    holidayDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
+    name: z.string().min(1, "Nama hari libur wajib diisi"),
+    year: z.coerce.number().int().min(2020).max(2050),
+    description: z.string().optional().nullable(),
+  })
+);
+
+export const itemImportBatchSchema = z.array(
+  z.object({
+    itemCode: z.string().min(1, "Kode item wajib diisi"),
+    name: z.string().min(1, "Nama item wajib diisi"),
+    category: z.nativeEnum(PackageCategory, {
+      errorMap: () => ({ message: "Kategori item tidak valid" }),
+    }),
+    uomId: z.string().min(1, "Satuan UoM wajib dipilih"),
+    specification: z.string().optional().nullable(),
+    standardPrice: z.coerce.number().min(0).default(0),
+    isActive: z.boolean().default(true),
+  })
+);
+

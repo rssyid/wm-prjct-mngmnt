@@ -35,6 +35,7 @@ export async function GET() {
       unpaidPackagesCount,
       rejectedArCount,
       waitingApprovalCount,
+      holidaysThisYearCount,
     ] = await Promise.all([
       // 1. Total proyek per status
       prisma.project.groupBy({
@@ -166,6 +167,13 @@ export async function GET() {
           deletedAt: null,
         },
       }),
+
+      // 14. Master Hari Libur tahun berjalan
+      prisma.holiday.count({
+        where: {
+          year: new Date().getFullYear(),
+        },
+      }),
     ]);
 
     // Format map proyek per status
@@ -236,6 +244,7 @@ export async function GET() {
       delayedProjectsCount,
       atRiskProjectsCount,
       onTrackProjectsCount,
+      holidaysThisYearCount,
       totalPendingNotifications:
         rejectedArCount + waitingApprovalCount + delayedProjectsCount,
     };

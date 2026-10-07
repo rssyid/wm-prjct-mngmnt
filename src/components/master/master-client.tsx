@@ -25,11 +25,15 @@ import * as React from "react";
 
 // Dialogs
 import { CategoryDialog } from "./forms/category-dialog";
+import { HolidayCsvDialog } from "./forms/holiday-csv-dialog";
 import { HolidayDialog } from "./forms/holiday-dialog";
 import { ItemDialog } from "./forms/item-dialog";
+import { ItemExcelImportDialog } from "./forms/item-excel-import-dialog";
 import { StructureTypeDialog, StructureVariantDialog } from "./forms/structure-dialog";
 import { UomDialog } from "./forms/uom-dialog";
 import { VendorDialog } from "./forms/vendor-dialog";
+import { MasterLocationTab } from "./master-location-tab";
+import { FileSpreadsheet, FileUp, MapPin } from "lucide-react";
 
 export interface ItemRow {
   id: string;
@@ -119,12 +123,15 @@ export function MasterClient({ userRole }: MasterClientProps) {
   // Dialog & Action States
   const [isAddOpen, setIsAddOpen] = React.useState(false);
   const [isAddVariantOpen, setIsAddVariantOpen] = React.useState(false);
+  const [isExcelImportOpen, setIsExcelImportOpen] = React.useState(false);
+  const [isHolidayCsvOpen, setIsHolidayCsvOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<Record<string, unknown> | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<{ type: string; id: string; name: string } | null>(null);
 
   // TanStack Query Fetcher
   const { data: responseData, isLoading } = useQuery<unknown[]>({
     queryKey: ["master", tab, debouncedSearch],
+    enabled: tab !== "location",
     queryFn: async () => {
       const res = await fetch(`/api/master?type=${tab}&search=${encodeURIComponent(debouncedSearch)}`);
       const json = await res.json();
@@ -549,11 +556,33 @@ export function MasterClient({ userRole }: MasterClientProps) {
             Master Data Sistem
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Pengelolaan katalog material, UoM, vendor, struktur & varian BOQ, serta kalender hari libur nasional.
+            Pengelolaan katalog material, hierarki lokasi kebun/PT, vendor, struktur BOQ, serta kalender hari libur nasional.
           </p>
         </div>
         {canModify && (
           <div className="flex items-center space-x-2">
+            {tab === "item" && (
+              <Button
+                variant="outline"
+                className="font-semibold shadow-xs"
+                onClick={() => setIsExcelImportOpen(true)}
+              >
+                <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
+                Import Excel (.xlsx)
+              </Button>
+            )}
+
+            {tab === "holiday" && (
+              <Button
+                variant="outline"
+                className="font-semibold shadow-xs"
+                onClick={() => setIsHolidayCsvOpen(true)}
+              >
+                <FileUp className="mr-2 h-4 w-4 text-primary" />
+                Bulk CSV (tanggal;nama)
+              </Button>
+            )}
+
             {tab === "structure" && (
               <Button
                 variant="outline"
@@ -567,21 +596,24 @@ export function MasterClient({ userRole }: MasterClientProps) {
                 Tambah Varian & BOQ
               </Button>
             )}
-            <Button
-              className="font-semibold shadow-xs"
-              onClick={() => {
-                setEditItem(null);
-                setIsAddOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {tab === "item" && "Tambah Item Material"}
-              {tab === "uom" && "Tambah Satuan (UoM)"}
-              {tab === "vendor" && "Tambah Vendor"}
-              {tab === "category" && "Tambah Kategori Proyek"}
-              {tab === "structure" && "Tambah Tipe Struktur"}
-              {tab === "holiday" && "Tambah Hari Libur"}
-            </Button>
+
+            {tab !== "location" && (
+              <Button
+                className="font-semibold shadow-xs"
+                onClick={() => {
+                  setEditItem(null);
+                  setIsAddOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                {tab === "item" && "Tambah Item Material"}
+                {tab === "uom" && "Tambah Satuan (UoM)"}
+                {tab === "vendor" && "Tambah Vendor"}
+                {tab === "category" && "Tambah Kategori Proyek"}
+                {tab === "structure" && "Tambah Tipe Struktur"}
+                {tab === "holiday" && "Tambah Hari Libur"}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -596,8 +628,12 @@ export function MasterClient({ userRole }: MasterClientProps) {
         className="space-y-4"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-2">
-          <TabsList className="h-10 bg-muted/60 p-1">
+          <TabsList className="h-10 bg-muted/60 p-1 flex-wrap">
             <TabsTrigger value="item">Material & Item</TabsTrigger>
+            <TabsTrigger value="location">
+              <MapPin className="mr-1.5 h-3.5 w-3.5" />
+              Lokasi (PT/Kebun/Blok)
+            </TabsTrigger>
             <TabsTrigger value="uom">Satuan (UoM)</TabsTrigger>
             <TabsTrigger value="vendor">Vendor</TabsTrigger>
             <TabsTrigger value="category">Kategori Proyek</TabsTrigger>
@@ -605,17 +641,19 @@ export function MasterClient({ userRole }: MasterClientProps) {
             <TabsTrigger value="holiday">Hari Libur</TabsTrigger>
           </TabsList>
 
-          {/* Search bar */}
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={`Cari di ${tab}...`}
-              className="pl-8 h-9 text-xs"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          {/* Search bar (sembunyikan di tab location karena location memiliki search terpadu) */}
+          {tab !== "location" && (
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={`Cari di ${tab}...`}
+                className="pl-8 h-9 text-xs"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         {/* Tab 1: Item */}
@@ -693,6 +731,11 @@ export function MasterClient({ userRole }: MasterClientProps) {
           </Card>
         </TabsContent>
 
+        {/* Tab Lokasi: Region / Company / Estate / Block */}
+        <TabsContent value="location" className="space-y-4 m-0">
+          <MasterLocationTab canModify={canModify} />
+        </TabsContent>
+
         {/* Tab 6: Holiday */}
         <TabsContent value="holiday" className="space-y-4 m-0">
           <Card className="border-border shadow-xs">
@@ -711,13 +754,23 @@ export function MasterClient({ userRole }: MasterClientProps) {
 
       {/* Forms & Dialogs */}
       {tab === "item" && (
-        <ItemDialog
-          open={isAddOpen}
-          onOpenChange={(open) => { setIsAddOpen(open); if (!open) setEditItem(null); }}
-          onSubmit={(data) => handleSave(data, "item")}
-          uomList={uomList}
-          initialData={editItem as unknown as ItemRow}
-        />
+        <>
+          <ItemDialog
+            open={isAddOpen}
+            onOpenChange={(open) => { setIsAddOpen(open); if (!open) setEditItem(null); }}
+            onSubmit={(data) => handleSave(data, "item")}
+            uomList={uomList}
+            initialData={editItem as unknown as ItemRow}
+          />
+          <ItemExcelImportDialog
+            open={isExcelImportOpen}
+            onOpenChange={setIsExcelImportOpen}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["master", "item"] });
+            }}
+            uomList={uomList}
+          />
+        </>
       )}
 
       {tab === "uom" && (
@@ -766,12 +819,22 @@ export function MasterClient({ userRole }: MasterClientProps) {
       )}
 
       {tab === "holiday" && (
-        <HolidayDialog
-          open={isAddOpen}
-          onOpenChange={(open) => { setIsAddOpen(open); if (!open) setEditItem(null); }}
-          onSubmit={(data) => handleSave(data, "holiday")}
-          initialData={editItem as unknown as HolidayRow}
-        />
+        <>
+          <HolidayDialog
+            open={isAddOpen}
+            onOpenChange={(open) => { setIsAddOpen(open); if (!open) setEditItem(null); }}
+            onSubmit={(data) => handleSave(data, "holiday")}
+            initialData={editItem as unknown as HolidayRow}
+          />
+          <HolidayCsvDialog
+            open={isHolidayCsvOpen}
+            onOpenChange={setIsHolidayCsvOpen}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["master", "holiday"] });
+              queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+            }}
+          />
+        </>
       )}
 
       {/* Delete Confirmation Alert Dialog */}

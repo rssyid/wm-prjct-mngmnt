@@ -26,8 +26,10 @@
 
 ## Phase C — Fitur Revisi
 
-- [x] Master Item CRUD (import Excel di tahap berikutnya)
-- [ ] Master lokasi Region/Company/Estate/Block UI CRUD lengkap
+- [x] Master Item CRUD + Import Excel (.xlsx dynamic import + baris gagal)
+- [x] Master lokasi Region/Company/Estate/Block UI CRUD lengkap (cascade alert + guard proyek 409)
+- [x] Manajemen Pengguna /users & /api/users (SUPER_ADMIN guard, bcrypt salt 10, no-leak password)
+- [x] Master Hari Libur bulk CSV (tanggal;nama) + EWS Alert tahun berjalan di dashboard
 - [x] Line item per paket (Master Item, qty plan vs received)
 - [x] UI kiriman berulang (deliveries) + keterlambatan dari kiriman terakhir
 - [x] Resubmit AFCE setelah REJECTED (attempt baru); UI history approval
