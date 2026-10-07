@@ -279,6 +279,7 @@ export function UserManagementClient({ currentUserId }: UserManagementClientProp
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
             title="Edit Pengguna & Peran"
+            aria-label={`Edit pengguna ${row.original.name}`}
             onClick={() => setEditingUser(row.original)}
           >
             <Edit className="h-3.5 w-3.5" />
@@ -289,6 +290,7 @@ export function UserManagementClient({ currentUserId }: UserManagementClientProp
             size="icon"
             className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
             title="Reset Password Langsung"
+            aria-label={`Reset kata sandi pengguna ${row.original.name}`}
             onClick={() => setResettingUser(row.original)}
           >
             <KeyRound className="h-3.5 w-3.5" />
@@ -300,6 +302,7 @@ export function UserManagementClient({ currentUserId }: UserManagementClientProp
               size="icon"
               className="h-8 w-8 text-destructive hover:bg-destructive/10"
               title="Hapus Akun Pengguna"
+              aria-label={`Hapus pengguna ${row.original.name}`}
               onClick={() => {
                 setDeleteErrorMsg(null);
                 setDeletingUser(row.original);

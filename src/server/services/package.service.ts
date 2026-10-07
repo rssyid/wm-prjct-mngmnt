@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCache } from "@/lib/redis";
 import {
   PackageCreateInput,
   PackageDeliveryInput,
@@ -204,7 +205,7 @@ export async function createPackage(
   input: PackageCreateInput,
   actorId: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // 1. Cek keberadaan proyek dan status
     const project = await tx.project.findUnique({
       where: { id: projectId },
@@ -358,6 +359,9 @@ export async function createPackage(
 
     return created;
   });
+
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**
@@ -373,7 +377,7 @@ export async function updatePackage(
   input: PackageUpdateInput,
   actorId: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const project = await tx.project.findUnique({
       where: { id: projectId },
       select: { id: true, status: true, deletedAt: true },
@@ -557,6 +561,9 @@ export async function updatePackage(
 
     return updated;
   });
+
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**
@@ -567,7 +574,7 @@ export async function deletePackage(
   packageId: string,
   actorId: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const project = await tx.project.findUnique({
       where: { id: projectId },
       select: { id: true, status: true, deletedAt: true },
@@ -620,6 +627,9 @@ export async function deletePackage(
 
     return { id: packageId, deleted: true };
   });
+
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**
@@ -631,7 +641,7 @@ export async function updatePackagePayment(
   input: PackagePaymentInput,
   actorId: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const project = await tx.project.findUnique({
       where: { id: projectId },
       select: { id: true, status: true, deletedAt: true },
@@ -669,6 +679,9 @@ export async function updatePackagePayment(
 
     return updated;
   });
+
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**
@@ -685,7 +698,7 @@ export async function recordPackageDelivery(
   input: PackageDeliveryInput,
   actorId: string
 ) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // 1. Cek proyek
     const project = await tx.project.findUnique({
       where: { id: projectId },
@@ -854,6 +867,9 @@ export async function recordPackageDelivery(
       deliveryDelayDays,
     };
   });
+
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**
@@ -930,7 +946,7 @@ export async function createPackageDocument(
     throw new AppError("Proyek telah dibatalkan", 409);
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const doc = await tx.packageDocument.create({
       data: {
         workPackageId,
@@ -959,6 +975,9 @@ export async function createPackageDocument(
 
     return doc;
   });
+
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**
@@ -988,7 +1007,7 @@ export async function deletePackageDocument(
     throw new AppError("Proyek telah dibatalkan", 409);
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.packageDocument.update({
       where: { id: packageDocId },
       data: { deletedAt: new Date() },
@@ -1009,5 +1028,8 @@ export async function deletePackageDocument(
 
     return updated;
   });
+
+  await invalidateDashboardCache();
+  return result;
 }
 

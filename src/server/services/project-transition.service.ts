@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCache } from "@/lib/redis";
 import { calculateProjectSla } from "@/lib/sla";
 import { Prisma, ProjectStatus, Role, StatusIndicator } from "@prisma/client";
 
@@ -147,13 +148,17 @@ async function applyTransitionInternal(params: InternalTransitionParams) {
     return updatedProject;
   };
 
+  let updatedProject;
   if (tx) {
-    return runner(tx);
+    updatedProject = await runner(tx);
+  } else {
+    updatedProject = await prisma.$transaction(async (newTx) => {
+      return runner(newTx);
+    });
   }
 
-  return prisma.$transaction(async (newTx) => {
-    return runner(newTx);
-  });
+  await invalidateDashboardCache();
+  return updatedProject;
 }
 
 /**

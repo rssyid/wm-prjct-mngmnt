@@ -316,7 +316,12 @@ export function ProjectsClient({ userRole }: ProjectsClientProps) {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={`Menu aksi proyek ${project.projectCode}`}
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -644,6 +649,7 @@ export function ProjectsClient({ userRole }: ProjectsClientProps) {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label="Halaman sebelumnya"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
@@ -653,6 +659,7 @@ export function ProjectsClient({ userRole }: ProjectsClientProps) {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label="Halaman selanjutnya"
                   disabled={page >= meta.totalPages}
                   onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
                 >

@@ -270,10 +270,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
             header: "Aksi",
             cell: ({ row }: { row: { original: ItemRow } }) => (
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ubah item ${row.original.name}`} onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ type: "item", id: row.original.id, name: row.original.name })}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" aria-label={`Hapus item ${row.original.name}`} onClick={() => setDeleteTarget({ type: "item", id: row.original.id, name: row.original.name })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -315,10 +315,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
             header: "Aksi",
             cell: ({ row }: { row: { original: UomRow } }) => (
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ubah satuan ${row.original.name}`} onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ type: "uom", id: row.original.id, name: row.original.name })}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" aria-label={`Hapus satuan ${row.original.name}`} onClick={() => setDeleteTarget({ type: "uom", id: row.original.id, name: row.original.name })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -370,10 +370,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
             header: "Aksi",
             cell: ({ row }: { row: { original: VendorRow } }) => (
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ubah vendor ${row.original.name}`} onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ type: "vendor", id: row.original.id, name: row.original.name })}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" aria-label={`Hapus vendor ${row.original.name}`} onClick={() => setDeleteTarget({ type: "vendor", id: row.original.id, name: row.original.name })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -415,10 +415,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
             header: "Aksi",
             cell: ({ row }: { row: { original: CategoryRow } }) => (
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ubah kategori ${row.original.name}`} onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ type: "category", id: row.original.id, name: row.original.name })}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" aria-label={`Hapus kategori ${row.original.name}`} onClick={() => setDeleteTarget({ type: "category", id: row.original.id, name: row.original.name })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -459,10 +459,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
                   </div>
                   {canModify && (
                     <div className="flex items-center space-x-1">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditItem(v as unknown as Record<string, unknown>); setIsAddVariantOpen(true); }}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Ubah varian ${v.name}`} onClick={() => { setEditItem(v as unknown as Record<string, unknown>); setIsAddVariantOpen(true); }}>
                         <Edit className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ type: "variant", id: v.id, name: v.name })}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" aria-label={`Hapus varian ${v.name}`} onClick={() => setDeleteTarget({ type: "variant", id: v.id, name: v.name })}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -481,10 +481,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
             header: "Aksi Tipe",
             cell: ({ row }: { row: { original: StructureTypeRow } }) => (
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ubah struktur ${row.original.name}`} onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ type: "structure", id: row.original.id, name: row.original.name })}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" aria-label={`Hapus struktur ${row.original.name}`} onClick={() => setDeleteTarget({ type: "structure", id: row.original.id, name: row.original.name })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -534,10 +534,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
             header: "Aksi",
             cell: ({ row }: { row: { original: HolidayRow } }) => (
               <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ubah libur ${row.original.name}`} onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
                   <Edit className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget({ type: "holiday", id: row.original.id, name: row.original.name })}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" aria-label={`Hapus libur ${row.original.name}`} onClick={() => setDeleteTarget({ type: "holiday", id: row.original.id, name: row.original.name })}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>

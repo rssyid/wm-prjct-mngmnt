@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCache } from "@/lib/redis";
 import { calculateProjectSla } from "@/lib/sla";
 import {
   BudgetType,
@@ -176,11 +177,15 @@ export async function createProject(
     return project;
   };
 
+  let projectResult;
   if (txClient) {
-    return runner(txClient);
+    projectResult = await runner(txClient);
+  } else {
+    projectResult = await prisma.$transaction(async (tx) => {
+      return runner(tx);
+    });
   }
 
-  return prisma.$transaction(async (tx) => {
-    return runner(tx);
-  });
+  await invalidateDashboardCache();
+  return projectResult;
 }

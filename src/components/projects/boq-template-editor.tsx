@@ -159,6 +159,7 @@ export function BoqTemplateEditor({ items, onChange }: BoqTemplateEditorProps) {
                       type="button"
                       variant="ghost"
                       size="icon"
+                      aria-label={`Hapus item BOQ ${item.name || index + 1}`}
                       onClick={() => handleRemoveItem(index)}
                       className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                     >

@@ -277,6 +277,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label={`Ubah region ${row.original.name}`}
                   onClick={() =>
                     setDialogState({
                       type: "region",
@@ -291,6 +292,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                  aria-label={`Hapus region ${row.original.name}`}
                   onClick={() => {
                     setDeleteErrorMsg(null);
                     setDeleteTarget({
@@ -369,6 +371,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label={`Ubah company ${row.original.name}`}
                   onClick={() =>
                     setDialogState({
                       type: "company",
@@ -383,6 +386,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                  aria-label={`Hapus company ${row.original.name}`}
                   onClick={() => {
                     setDeleteErrorMsg(null);
                     setDeleteTarget({
@@ -461,6 +465,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label={`Ubah estate ${row.original.name}`}
                   onClick={() =>
                     setDialogState({
                       type: "estate",
@@ -475,6 +480,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                  aria-label={`Hapus estate ${row.original.name}`}
                   onClick={() => {
                     setDeleteErrorMsg(null);
                     setDeleteTarget({
@@ -565,6 +571,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label={`Ubah blok ${row.original.name}`}
                   onClick={() =>
                     setDialogState({
                       type: "block",
@@ -579,6 +586,7 @@ export function MasterLocationTab({ canModify }: MasterLocationTabProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                  aria-label={`Hapus blok ${row.original.name}`}
                   onClick={() => {
                     setDeleteErrorMsg(null);
                     setDeleteTarget({

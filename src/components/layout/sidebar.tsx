@@ -15,6 +15,7 @@ import {
   Droplets,
   FolderKanban,
   LayoutDashboard,
+  BarChart3,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -38,6 +39,11 @@ const NAV_ITEMS = [
     title: "Proyek",
     href: "/projects",
     icon: FolderKanban,
+  },
+  {
+    title: "Laporan & Portofolio",
+    href: "/reports",
+    icon: BarChart3,
   },
   {
     title: "Master Data",

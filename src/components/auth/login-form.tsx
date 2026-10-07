@@ -50,7 +50,13 @@ export function LoginForm() {
       });
 
       if (!result?.ok) {
-        setErrorMessage("Email atau kata sandi tidak sesuai. Silakan periksa kembali.");
+        if (result?.status === 429) {
+          setErrorMessage(
+            "Terlalu banyak percobaan masuk. Silakan coba lagi dalam 5 menit."
+          );
+        } else {
+          setErrorMessage("Email atau kata sandi tidak sesuai. Silakan periksa kembali.");
+        }
         setIsLoading(false);
         return;
       }

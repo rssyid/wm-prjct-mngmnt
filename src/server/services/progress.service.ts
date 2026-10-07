@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCache } from "@/lib/redis";
 import { calculateProjectSla } from "@/lib/sla";
 import { Prisma, ProjectStatus } from "@prisma/client";
 
@@ -260,13 +261,17 @@ export async function createProgressLog(
     return progressLog;
   };
 
+  let result;
   if (txClient) {
-    return runner(txClient);
+    result = await runner(txClient);
+  } else {
+    result = await prisma.$transaction(async (tx) => {
+      return runner(tx);
+    });
   }
 
-  return prisma.$transaction(async (tx) => {
-    return runner(tx);
-  });
+  await invalidateDashboardCache();
+  return result;
 }
 
 export interface UpdateProgressLogInput {
@@ -392,13 +397,17 @@ export async function updateProgressLog(
     return updatedLog;
   };
 
+  let result;
   if (txClient) {
-    return runner(txClient);
+    result = await runner(txClient);
+  } else {
+    result = await prisma.$transaction(async (tx) => {
+      return runner(tx);
+    });
   }
 
-  return prisma.$transaction(async (tx) => {
-    return runner(tx);
-  });
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**
@@ -492,13 +501,17 @@ export async function deleteProgressLog(
     return { success: true };
   };
 
+  let result;
   if (txClient) {
-    return runner(txClient);
+    result = await runner(txClient);
+  } else {
+    result = await prisma.$transaction(async (tx) => {
+      return runner(tx);
+    });
   }
 
-  return prisma.$transaction(async (tx) => {
-    return runner(tx);
-  });
+  await invalidateDashboardCache();
+  return result;
 }
 
 /**

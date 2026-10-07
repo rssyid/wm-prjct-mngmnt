@@ -1,5 +1,6 @@
 import { AppError, apiSuccess, handleApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCache } from "@/lib/redis";
 import { recycleBinActionSchema } from "@/lib/validations/project.schema";
 import { requireRole } from "@/server/auth-guard";
 import { Role } from "@prisma/client";
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
         });
       });
 
+      await invalidateDashboardCache();
       return apiSuccess({ message: `Proyek ${project.projectCode} berhasil dipulihkan` });
     }
 
@@ -132,6 +134,7 @@ export async function POST(request: NextRequest) {
         });
       });
 
+      await invalidateDashboardCache();
       return apiSuccess({
         message: `Proyek ${project.projectCode} berhasil dihapus permanen`,
       });

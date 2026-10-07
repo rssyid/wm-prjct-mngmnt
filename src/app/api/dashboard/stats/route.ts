@@ -1,5 +1,6 @@
 import { apiSuccess, handleApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { getRedisClient } from "@/lib/redis";
 import { requireSession } from "@/server/auth-guard";
 import {
   AfceStatus,
@@ -8,6 +9,7 @@ import {
   ProjectStatus,
   StatusIndicator,
 } from "@prisma/client";
+import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +17,38 @@ export const dynamic = "force-dynamic";
  * GET /api/dashboard/stats
  * Mengambil ringkasan statistik KPI proyek, early warning system (EWS),
  * proyek DELAYED teratas, ringkasan pengadaan outstanding, dan hitungan notifikasi.
- * (Belum ada cache dulu sesuai instruksi sprint).
+ * Di-cache di Upstash Redis dengan TTL 60 detik (key: dash:global atau dash:company:{id}).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await requireSession();
+
+    const companyId = request.nextUrl.searchParams.get("companyId") || undefined;
+    const cacheKey = companyId ? `dash:company:${companyId}` : "dash:global";
+
+    // 1. Cek cache Upstash Redis
+    const redis = getRedisClient();
+    if (redis) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          return apiSuccess(cached);
+        }
+      } catch (cacheErr) {
+        console.error("[Upstash Redis] Gagal membaca cache dashboard:", cacheErr);
+      }
+    }
+
+    // Filter per company bila ada
+    const baseProjectWhere = {
+      deletedAt: null,
+      ...(companyId ? { companyId } : {}),
+    };
+
+    const basePackageWhere = {
+      deletedAt: null,
+      ...(companyId ? { project: { companyId, deletedAt: null } } : {}),
+    };
 
     const [
       projectStatusGroups,
@@ -40,26 +69,26 @@ export async function GET() {
       // 1. Total proyek per status
       prisma.project.groupBy({
         by: ["status"],
-        where: { deletedAt: null },
+        where: baseProjectWhere,
         _count: { id: true },
       }),
 
       // 2. Total proyek per statusIndicator
       prisma.project.groupBy({
         by: ["statusIndicator"],
-        where: { deletedAt: null },
+        where: baseProjectWhere,
         _count: { id: true },
       }),
 
       // 3. Total semua proyek aktif/non-aktif
       prisma.project.count({
-        where: { deletedAt: null },
+        where: baseProjectWhere,
       }),
 
       // 4. Proyek aktif (bukan COMPLETED atau CANCELLED)
       prisma.project.count({
         where: {
-          deletedAt: null,
+          ...baseProjectWhere,
           status: { notIn: [ProjectStatus.COMPLETED, ProjectStatus.CANCELLED] },
         },
       }),
@@ -67,7 +96,7 @@ export async function GET() {
       // 5. Proyek tuntas
       prisma.project.count({
         where: {
-          deletedAt: null,
+          ...baseProjectWhere,
           status: ProjectStatus.COMPLETED,
         },
       }),
@@ -75,7 +104,7 @@ export async function GET() {
       // 6. Proyek DELAYED teratas (maksimal 10)
       prisma.project.findMany({
         where: {
-          deletedAt: null,
+          ...baseProjectWhere,
           statusIndicator: StatusIndicator.DELAYED,
           status: { not: ProjectStatus.COMPLETED },
         },
@@ -100,7 +129,7 @@ export async function GET() {
       // 7. Proyek AT_RISK teratas (maksimal 10)
       prisma.project.findMany({
         where: {
-          deletedAt: null,
+          ...baseProjectWhere,
           statusIndicator: StatusIndicator.AT_RISK,
           status: { not: ProjectStatus.COMPLETED },
         },
@@ -124,20 +153,20 @@ export async function GET() {
 
       // 8. Total paket pengadaan
       prisma.workPackage.count({
-        where: { deletedAt: null },
+        where: basePackageWhere,
       }),
 
       // 9. Paket pengadaan per status
       prisma.workPackage.groupBy({
         by: ["status"],
-        where: { deletedAt: null },
+        where: basePackageWhere,
         _count: { id: true },
       }),
 
       // 10. Paket outstanding (belum COMPLETED atau CANCELLED)
       prisma.workPackage.count({
         where: {
-          deletedAt: null,
+          ...basePackageWhere,
           status: {
             notIn: [PackageStatus.COMPLETED, PackageStatus.CANCELLED],
           },
@@ -147,7 +176,7 @@ export async function GET() {
       // 11. Paket belum lunas (BELUM_LUNAS atau DALAM_PROSES)
       prisma.workPackage.count({
         where: {
-          deletedAt: null,
+          ...basePackageWhere,
           paymentStatus: { not: PaymentStatus.LUNAS },
         },
       }),
@@ -156,15 +185,15 @@ export async function GET() {
       prisma.afceDocument.count({
         where: {
           status: AfceStatus.REJECTED,
-          project: { deletedAt: null },
+          project: baseProjectWhere,
         },
       }),
 
       // 13. Notifikasi: Menunggu approval AR
       prisma.project.count({
         where: {
+          ...baseProjectWhere,
           status: ProjectStatus.WAITING_AFCE_AR,
-          deletedAt: null,
         },
       }),
 
@@ -248,6 +277,15 @@ export async function GET() {
       totalPendingNotifications:
         rejectedArCount + waitingApprovalCount + delayedProjectsCount,
     };
+
+    // 2. Simpan ke Upstash Redis dengan TTL 60 detik
+    if (redis) {
+      try {
+        await redis.set(cacheKey, stats, { ex: 60 });
+      } catch (cacheSetErr) {
+        console.error("[Upstash Redis] Gagal menyimpan cache dashboard:", cacheSetErr);
+      }
+    }
 
     return apiSuccess(stats);
   } catch (error) {

@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Bell, Clock, Menu } from "lucide-react";
+import { AlertTriangle, Bell, Clock, Menu, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserNav } from "./user-nav";
@@ -72,6 +72,38 @@ export function Navbar({ onMobileMenuToggle, user }: NavbarProps) {
 
       {/* Right actions */}
       <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Command palette trigger */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", ctrlKey: true })
+            );
+          }}
+          className="hidden md:flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground h-9 px-3 rounded-md border-border bg-background/50"
+          aria-label="Buka pencarian cepat (Ctrl+K)"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span>Cari proyek / menu...</span>
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <span className="text-[10px]">Ctrl</span>K
+          </kbd>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", ctrlKey: true })
+            );
+          }}
+          className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9"
+          aria-label="Buka pencarian cepat"
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+
         <NotificationBadge />
         <ThemeToggle />
         <div className="h-4 w-px bg-border mx-1" />

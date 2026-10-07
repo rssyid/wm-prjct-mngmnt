@@ -391,6 +391,7 @@ export function StructureVariantDialog({
                       type="button"
                       variant="ghost"
                       size="icon"
+                      aria-label="Hapus item BOQ varian"
                       className="h-7 w-7 text-destructive hover:bg-destructive/10"
                       onClick={() => remove(index)}
                     >

@@ -2,6 +2,16 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { AppShell } from "@/components/layout/app-shell";
+import dynamic from "next/dynamic";
+import { TimelineTabSkeleton } from "@/components/projects/timeline-tab";
+
+const ProjectTimelineTab = dynamic(
+  () => import("@/components/projects/timeline-tab").then((mod) => mod.ProjectTimelineTab),
+  {
+    loading: () => <TimelineTabSkeleton />,
+    ssr: false,
+  }
+);
 import { ProcurementTab } from "@/components/procurement/procurement-tab";
 import { AfceTab } from "@/components/projects/afce-tab";
 import { BastTab } from "@/components/projects/bast-tab";
@@ -110,6 +120,13 @@ interface ProjectDetailResponse {
       status: AfceStatus;
       noAr: string | null;
       currentAttempt: number;
+      emailSubmittedDate?: string | null;
+      mcaApprovalDate?: string | null;
+    } | null;
+    bastDocument?: {
+      id: string;
+      submittedAt?: string | null;
+      verifiedAt?: string | null;
     } | null;
   };
 }
@@ -587,6 +604,9 @@ export default function ProjectDetailPage({
                 <TabsTrigger value="overview" className="text-xs">
                   Ikhtisar
                 </TabsTrigger>
+                <TabsTrigger value="timeline" className="text-xs">
+                  Timeline
+                </TabsTrigger>
                 <TabsTrigger value="afce" className="text-xs">
                   AFCE & AR
                 </TabsTrigger>
@@ -744,6 +764,20 @@ export default function ProjectDetailPage({
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="timeline">
+                <ProjectTimelineTab
+                  projectId={project.id}
+                  project={{
+                    id: project.id,
+                    targetStartDate: project.targetStartDate,
+                    targetEndDate: project.targetEndDate,
+                    currentWeek: project.currentWeek,
+                    afceDocument: project.afceDocument,
+                    bastDocument: project.bastDocument,
+                  }}
+                />
               </TabsContent>
 
               <TabsContent value="afce">

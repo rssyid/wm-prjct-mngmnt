@@ -1,4 +1,5 @@
 import { AppError, apiSuccess, handleApiError } from "@/lib/api-error";
+import { checkPresignRateLimit } from "@/lib/ratelimit";
 import { getR2BucketName, getR2Client, getR2PublicBaseUrl } from "@/lib/r2";
 import { requireRole } from "@/server/auth-guard";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -48,7 +49,16 @@ function isAllowedFile(contentType: string, filename: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     // 1. Auth & Role check (SUPER_ADMIN & WM_HO_SPECIALIST)
-    await requireRole(Role.SUPER_ADMIN, Role.WM_HO_SPECIALIST);
+    const session = await requireRole(Role.SUPER_ADMIN, Role.WM_HO_SPECIALIST);
+
+    // Rate limit: maks 60 request / jam / user
+    const rateLimit = await checkPresignRateLimit(session.user.id);
+    if (!rateLimit.success) {
+      throw new AppError(
+        "Batas unggah tercapai (maksimal 60 berkas per jam). Silakan coba lagi nanti.",
+        429
+      );
+    }
 
     // 2. Parse & Validate request body
     const body = await request.json();

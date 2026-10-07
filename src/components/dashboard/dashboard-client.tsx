@@ -1,6 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+
+const PortfolioGanttChart = dynamic(
+  () =>
+    import("@/components/reports/portfolio-gantt-chart").then(
+      (m) => m.PortfolioGanttChart
+    ),
+  {
+    loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
+    ssr: false,
+  }
+);
 import {
   Card,
   CardContent,
@@ -504,6 +516,12 @@ export function DashboardClient({ user }: DashboardClientProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* Timeline Portofolio Proyek Aktif */}
+          <PortfolioGanttChart
+            title="Timeline Portofolio Proyek Aktif"
+            description="Jadwal pelaksanaan seluruh proyek dalam satu garis waktu komprehensif."
+          />
 
           {/* Distribusi Proyek Berdasarkan Tahapan Status */}
           <Card className="border-border shadow-xs">

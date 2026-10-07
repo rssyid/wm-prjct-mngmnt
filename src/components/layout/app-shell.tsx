@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import * as React from "react";
+import { CommandPalette } from "@/components/command/command-palette";
 import { Navbar } from "./navbar";
 import { Sidebar } from "./sidebar";
 
@@ -96,6 +97,9 @@ export function AppShell({ children, user }: AppShellProps) {
           </div>
         </main>
       </div>
+
+      {/* Command Palette cmdk (Ctrl+K) */}
+      <CommandPalette />
     </div>
   );
 }

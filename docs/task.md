@@ -37,21 +37,22 @@
 - [x] Verifikasi BAST khusus SUPER_ADMIN; proyek COMPLETED read-only di UI
 - [x] Paginasi server + search debounce di list proyek
 - [x] Dashboard KPI & Early Warning System (EWS) UI auto-refresh 60s, skeleton, navbar badge terpadu
-- [ ] Gantt portofolio; laporan PDF/Excel (status, outstanding payment, realisasi anggaran)
+- [x] Gantt portofolio & visualisasi proyek (Gantt paket rencana vs realisasi, Kurva S Recharts, portofolio desktop + mobile card fallback); kerangka laporan /reports
+- [x] Laporan & export PDF/Excel (F-09: status proyek via jsPDF + autotable, pengadaan outstanding & realisasi anggaran via xlsx, dynamic import, id-ID)
 - [x] Upload dokumen & foto via presign R2 + kompresi client (≤1600 px, q0.8)
 
 ## Phase D — Performa & Stack
 
 - [x] Adapter `@prisma/adapter-neon` di `lib/prisma.ts`; region `sin1` untuk Vercel & Neon & Upstash
-- [ ] Cache `/api/dashboard/stats` di Upstash (TTL 60 s) + invalidasi mutasi
-- [ ] Rate limit `/api/auth/**` & `/api/uploads/presign`
-- [ ] Foto R2 tanpa `next/image` optimizer; komponen berat tetap lazy/dinamis
-- [ ] Cron harian `/api/health` (pemanasan pra-jam-kerja) + `CRON_SECRET`
+- [x] Cache `/api/dashboard/stats` di Upstash (TTL 60 s) + invalidasi mutasi
+- [x] Rate limit `/api/auth/**` & `/api/uploads/presign`
+- [x] Foto R2 tanpa `next/image` optimizer; komponen berat tetap lazy/dinamis
+- [x] Cron harian `/api/health` (pemanasan pra-jam-kerja) + `CRON_SECRET`
 
 ## Phase E — UI/UX (design v2)
 
 - [x] Migrasi tabel → TanStack Table; filter → nuqs; fetch → TanStack Query
-- [ ] Command palette cmdk (Ctrl+K)
+- [x] Command palette cmdk (Ctrl+K)
 - [x] Konstanta status terpusat `lib/constants/status.ts` (skeleton & kartu mobile pada fase tabel)
 - [x] Font Inter + JetBrains Mono via next/font; dark mode kontras ditingkatkan
 - [x] AlertDialog + alasan wajib untuk HOLD/CANCEL; audit aksesibilitas

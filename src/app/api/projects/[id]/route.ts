@@ -1,5 +1,6 @@
 import { AppError, apiSuccess, handleApiError } from "@/lib/api-error";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCache } from "@/lib/redis";
 import { calculateProjectSla } from "@/lib/sla";
 import { projectInputSchema } from "@/lib/validations/project.schema";
 import { requireRole, requireSession } from "@/server/auth-guard";
@@ -162,6 +163,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return updatedProject;
     });
 
+    await invalidateDashboardCache();
     return apiSuccess(updated);
   } catch (error) {
     return handleApiError(error, "Gagal memperbarui data proyek");
@@ -247,6 +249,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       });
     });
 
+    await invalidateDashboardCache();
+
     return apiSuccess({
       id: params.id,
       message: "Proyek dan seluruh data terkait berhasil dipindahkan ke recycle bin",
@@ -309,6 +313,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return proj;
     });
 
+    await invalidateDashboardCache();
     return apiSuccess(updated);
   } catch (error) {
     return handleApiError(error, "Gagal memperbarui dokumen proyek");

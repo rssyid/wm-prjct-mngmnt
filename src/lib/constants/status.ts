@@ -1,6 +1,7 @@
 import {
   AfceStatus,
   ApprovalStatus,
+  PackageCategory,
   PackageStatus,
   PaymentStatus,
   ProjectStatus,
@@ -12,6 +13,14 @@ export interface StatusConfig {
   badgeClass: string;
   dotClass: string;
 }
+
+export const PACKAGE_CATEGORY_CONFIG: Record<PackageCategory, { label: string }> = {
+  MATERIAL: { label: "Material" },
+  FABRICATION: { label: "Fabrikasi" },
+  CONTRACTOR: { label: "Kontraktor" },
+  HEAVY_EQUIPMENT: { label: "Alat Berat" },
+  SWAKELOLA: { label: "Swakelola" },
+};
 
 /**
  * Pemetaan warna dan label semantik ProjectStatus sesuai docs/design.md §2:

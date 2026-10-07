@@ -844,6 +844,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                           onClick={() => handleRemoveApprover(index)}
                           className="h-7 w-7 text-muted-foreground hover:text-rose-600"
                           title="Hapus baris approver"
+                          aria-label="Hapus baris approver"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
