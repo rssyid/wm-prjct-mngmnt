@@ -5,16 +5,18 @@ import {
   ProjectGanttChart,
   ProjectMilestoneInfo,
 } from "@/components/projects/project-gantt-chart";
+import { ProjectMatrixGanttChart } from "@/components/projects/project-matrix-gantt-chart";
 import {
   ProjectSCurveChart,
   SCurveLog,
   SCurvePackage,
 } from "@/components/projects/project-scurve-chart";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
-import React, { useMemo } from "react";
+import { AlertCircle, GanttChartSquare, TableProperties } from "lucide-react";
+import React, { useMemo, useState } from "react";
 
 interface ProjectTimelineTabProps {
   projectId: string;
@@ -38,6 +40,8 @@ export function ProjectTimelineTab({
   projectId,
   project,
 }: ProjectTimelineTabProps) {
+  const [ganttViewMode, setGanttViewMode] = useState<"matrix" | "bar">("matrix");
+
   // 1. Fetch paket kerja
   const {
     data: packagesData,
@@ -130,10 +134,51 @@ export function ProjectTimelineTab({
 
   return (
     <div className="space-y-6">
-      {/* 1. Gantt Chart Detail Paket Kerja */}
-      <ProjectGanttChart packages={packages} milestones={milestones} />
+      {/* 1. Mode Switcher Gantt Chart */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/30 border border-border rounded-lg p-2.5">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-foreground">
+            Mode Tampilan Gantt:
+          </span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            &bull; Pilih format matriks mingguan (spreadsheet) atau bar horizontal
+          </span>
+        </div>
+        <div className="flex items-center rounded-md border border-border bg-background p-0.5 shadow-2xs">
+          <Button
+            size="sm"
+            variant={ganttViewMode === "matrix" ? "secondary" : "ghost"}
+            onClick={() => setGanttViewMode("matrix")}
+            className="h-7 px-3 text-xs gap-1.5 font-medium"
+          >
+            <TableProperties className="h-3.5 w-3.5 text-primary" />
+            Matriks Mingguan
+          </Button>
+          <Button
+            size="sm"
+            variant={ganttViewMode === "bar" ? "secondary" : "ghost"}
+            onClick={() => setGanttViewMode("bar")}
+            className="h-7 px-3 text-xs gap-1.5 font-medium"
+          >
+            <GanttChartSquare className="h-3.5 w-3.5 text-primary" />
+            Timeline Bar
+          </Button>
+        </div>
+      </div>
 
-      {/* 2. S-Curve Recharts */}
+      {/* 2. Visualisasi Gantt Chart Terpilih */}
+      {ganttViewMode === "matrix" ? (
+        <ProjectMatrixGanttChart
+          packages={packages}
+          milestones={milestones}
+          targetStartDate={project.targetStartDate}
+          targetEndDate={project.targetEndDate}
+        />
+      ) : (
+        <ProjectGanttChart packages={packages} milestones={milestones} />
+      )}
+
+      {/* 3. S-Curve Recharts */}
       <ProjectSCurveChart
         targetStartDate={project.targetStartDate}
         targetEndDate={project.targetEndDate}
