@@ -791,6 +791,9 @@ export default function ProjectDetailPage({
                 <AfceTab
                   projectId={project.id}
                   projectStatus={project.status}
+                  defaultBudgetAmount={
+                    project.totalBudgetAmount ? Number(project.totalBudgetAmount) : 0
+                  }
                   onProjectUpdated={refetch}
                 />
               </TabsContent>

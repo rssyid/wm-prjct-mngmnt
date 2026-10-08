@@ -119,6 +119,7 @@ interface SupplementaryArResponse {
 interface AfceTabProps {
   projectId: string;
   projectStatus: ProjectStatus;
+  defaultBudgetAmount?: number;
   onProjectUpdated?: () => void;
 }
 
@@ -133,7 +134,12 @@ export const DEFAULT_APPROVER_ROLES = [
   "Chairman",
 ];
 
-export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabProps) {
+export function AfceTab({
+  projectId,
+  projectStatus,
+  defaultBudgetAmount = 0,
+  onProjectUpdated,
+}: AfceTabProps) {
   const queryClient = useQueryClient();
 
   // 1. Fetch Dokumen AFCE
@@ -205,7 +211,8 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
       setNoAr(afce.noAr || "");
       setArType(afce.arType || "REGULAR");
       setBudgetType(afce.budgetType || "CAPEX_BUDGETED");
-      setApprovedAmount(afce.approvedAmount ? Number(afce.approvedAmount) : 0);
+      const amt = afce.approvedAmount ? Number(afce.approvedAmount) : 0;
+      setApprovedAmount(amt > 0 ? amt : (defaultBudgetAmount || 0));
       setDrawingReady(afce.drawingReady || false);
       setRabReady(afce.rabReady || false);
       setMapReady(afce.mapReady || false);
@@ -262,6 +269,9 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
         );
       }
     } else {
+      if (defaultBudgetAmount > 0) {
+        setApprovedAmount(defaultBudgetAmount);
+      }
       // Default initial 8 level untuk dokumen baru
       setActiveApprovals(
         DEFAULT_APPROVER_ROLES.map((role, idx) => ({
@@ -273,7 +283,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
         }))
       );
     }
-  }, [afce]);
+  }, [afce, defaultBudgetAmount]);
 
   const applyPresetSap = (
     preset: "budget-low" | "budget-high" | "nonbudget-low" | "nonbudget-high"

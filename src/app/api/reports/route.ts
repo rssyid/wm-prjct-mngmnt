@@ -327,6 +327,7 @@ export async function GET(request: NextRequest) {
           projectName: true,
           displayName: true,
           status: true,
+          totalBudgetAmount: true,
           company: {
             select: {
               id: true,
@@ -439,7 +440,7 @@ export async function GET(request: NextRequest) {
           regionName: p.company.region?.name || "Wilayah Lainnya / Tanpa Region",
           status: p.status,
           noAr: afce?.noAr || "-",
-          approvedAmount: Number(afce?.approvedAmount || 0),
+          approvedAmount: Number(afce?.approvedAmount || p.totalBudgetAmount || 0),
           currentAttempt,
           afceStatus: afce?.status || "PENDING",
           emailSubmittedDate: afce?.emailSubmittedDate
