@@ -231,3 +231,50 @@ export const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, StatusConfig> = {
     dotClass: "bg-emerald-500",
   },
 };
+
+/**
+ * Standar 9 Jabatan Release Matrix Approval AR (SAP Release Matrix)
+ */
+export const SAP_APPROVAL_ROLES = [
+  { code: "EM", label: "EM (Estate Manager)" },
+  { code: "GEM", label: "GEM (Group Estate Manager)" },
+  { code: "RH", label: "RH (Regional Head)" },
+  { code: "HP", label: "HP (Head of Plantation)" },
+  { code: "MCA", label: "MCA (VP MCA / Management Control & Audit)" },
+  { code: "CFO", label: "CFO (Chief Financial Officer)" },
+  { code: "COO", label: "COO (Chief Operating Officer)" },
+  { code: "CEO", label: "CEO (Chief Executive Officer)" },
+  { code: "Chairman", label: "Chairman (Chair)" },
+] as const;
+
+export type SapApprovalRoleCode = (typeof SAP_APPROVAL_ROLES)[number]["code"];
+
+export const SAP_ROLE_CODES: SapApprovalRoleCode[] = [
+  "EM",
+  "GEM",
+  "RH",
+  "HP",
+  "MCA",
+  "CFO",
+  "COO",
+  "CEO",
+  "Chairman",
+];
+
+/**
+ * Normalisasi variasi string jabatan ke kode standar SAP (EM, GEM, RH, HP, MCA, CFO, COO, CEO, Chairman)
+ */
+export function normalizeApprovalRoleCode(rawRole: string): string {
+  if (!rawRole) return "";
+  const upper = rawRole.toUpperCase().trim();
+  if (upper.startsWith("GEM")) return "GEM";
+  if (upper.startsWith("EM")) return "EM";
+  if (upper.startsWith("RH")) return "RH";
+  if (upper.startsWith("HP")) return "HP";
+  if (upper.startsWith("MCA")) return "MCA";
+  if (upper.startsWith("CFO")) return "CFO";
+  if (upper.startsWith("COO")) return "COO";
+  if (upper.startsWith("CEO")) return "CEO";
+  if (upper.startsWith("CHAIR")) return "Chairman";
+  return rawRole;
+}

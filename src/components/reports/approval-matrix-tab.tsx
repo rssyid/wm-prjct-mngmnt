@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import {
   PROJECT_STATUS_CONFIG,
+  normalizeApprovalRoleCode,
 } from "@/lib/constants/status";
 import {
   ApprovalMatrixItem,
@@ -146,38 +147,34 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
     }
   };
 
-  // Helper render badge untuk sel level approver
-  const renderLevelCell = (item: ApprovalMatrixItem, level: number) => {
-    const snap = item.snapshots.find((s) => s.level === level);
-    if (!snap) {
+  // Helper render badge untuk sel per role SAP (EM s/d Chairman)
+  const renderRoleCell = (item: ApprovalMatrixItem, roleCode: string) => {
+    const snap = item.snapshots.find(
+      (s) => normalizeApprovalRoleCode(s.role) === roleCode
+    );
+    if (!snap || snap.status === "TIDAK_PERLU") {
       return (
-        <span className="text-[11px] text-muted-foreground/40 italic">-</span>
-      );
-    }
-
-    if (snap.status === "TIDAK_PERLU") {
-      return (
-        <span className="inline-block text-[10px] text-muted-foreground/60 border border-dashed border-border/80 bg-muted/20 px-1.5 py-0.5 rounded-xs">
-          Tidak Perlu
-        </span>
+        <div className="text-center">
+          <span className="text-[11px] text-muted-foreground/30">-</span>
+        </div>
       );
     }
 
     if (snap.status === "APPROVED") {
       return (
-        <div className="flex flex-col gap-0.5 text-[11px]">
-          <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="h-3 w-3 shrink-0" />
-            <span className="truncate">[{snap.role}]</span>
-          </span>
-          {snap.personName && (
-            <span className="text-[10px] text-muted-foreground truncate max-w-[110px]">
-              {snap.personName}
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-[10px] font-mono">
+              {snap.approvedAt ? formatDate(snap.approvedAt) : "OK"}
             </span>
-          )}
-          {snap.approvedAt && (
-            <span className="text-[9px] text-muted-foreground/80 font-mono">
-              {formatDate(snap.approvedAt)}
+          </div>
+          {snap.personName && (
+            <span
+              className="text-[9px] text-muted-foreground truncate max-w-[75px]"
+              title={snap.personName}
+            >
+              {snap.personName}
             </span>
           )}
         </div>
@@ -186,22 +183,22 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
 
     if (snap.status === "REJECTED") {
       return (
-        <div className="flex flex-col gap-0.5 text-[11px]">
-          <span className="inline-flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
-            <XCircle className="h-3 w-3 shrink-0" />
-            <span className="truncate">[{snap.role}] Ditolak</span>
-          </span>
-          {snap.personName && (
-            <span className="text-[10px] text-muted-foreground truncate max-w-[110px]">
-              {snap.personName}
+        <div className="flex flex-col items-center justify-center text-center">
+          <div
+            className="inline-flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400"
+            title={snap.notes || "Ditolak"}
+          >
+            <XCircle className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-[10px] font-mono">
+              {snap.rejectedAt ? formatDate(snap.rejectedAt) : "Tolak"}
             </span>
-          )}
-          {snap.notes && (
+          </div>
+          {snap.personName && (
             <span
-              className="text-[9px] text-rose-500 italic truncate max-w-[110px]"
-              title={snap.notes}
+              className="text-[9px] text-muted-foreground truncate max-w-[75px]"
+              title={snap.personName}
             >
-              &ldquo;{snap.notes}&rdquo;
+              {snap.personName}
             </span>
           )}
         </div>
@@ -210,14 +207,24 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
 
     // WAITING
     return (
-      <div className="flex flex-col gap-0.5 text-[11px]">
-        <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+      <div className="flex flex-col items-center justify-center text-center">
+        <div
+          className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium"
+          title={`Menunggu paraf (${snap.waitingDays} hari)`}
+        >
           <Clock className="h-3 w-3 shrink-0 animate-pulse" />
-          <span className="truncate">[{snap.role}]</span>
-        </span>
-        <span className="text-[10px] font-medium text-amber-700 dark:text-amber-300">
-          Menunggu {snap.waitingDays > 0 ? `(${snap.waitingDays} hari)` : ""}
-        </span>
+          <span className="text-[10px]">
+            {snap.waitingDays > 0 ? `${snap.waitingDays}h` : "Wait"}
+          </span>
+        </div>
+        {snap.personName && (
+          <span
+            className="text-[9px] text-muted-foreground truncate max-w-[75px]"
+            title={snap.personName}
+          >
+            {snap.personName}
+          </span>
+        )}
       </div>
     );
   };
@@ -398,7 +405,7 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
                 Matriks Persetujuan Berjenjang AR (Release Matrix SAP)
               </CardTitle>
               <CardDescription className="text-xs">
-                Standar 8 Level (EM s/d Chairman) · SLA Review SAP rata-rata 2–3 minggu.
+                Matriks 9 Jabatan Release SAP (EM, GEM, RH, HP, MCA, CFO, COO, CEO, Chairman) · Menampilkan centang &amp; tanggal paraf approved.
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-xs">
@@ -436,20 +443,21 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
               <Table>
                 <TableHeader className="bg-muted/40 text-[11px]">
                   <TableRow>
-                    <TableHead className="w-12 text-center">No</TableHead>
-                    <TableHead className="min-w-[180px]">Proyek & Status</TableHead>
+                    <TableHead className="w-10 text-center">No</TableHead>
+                    <TableHead className="min-w-[170px]">Proyek & Status</TableHead>
                     <TableHead className="min-w-[140px]">Perusahaan & Region</TableHead>
-                    <TableHead className="min-w-[130px]">No AR & Nilai</TableHead>
-                    <TableHead className="min-w-[110px]">Level 1</TableHead>
-                    <TableHead className="min-w-[110px]">Level 2</TableHead>
-                    <TableHead className="min-w-[110px]">Level 3</TableHead>
-                    <TableHead className="min-w-[110px]">Level 4</TableHead>
-                    <TableHead className="min-w-[110px]">Level 5</TableHead>
-                    <TableHead className="min-w-[110px]">Level 6</TableHead>
-                    <TableHead className="min-w-[110px]">Level 7</TableHead>
-                    <TableHead className="min-w-[110px]">Level 8</TableHead>
+                    <TableHead className="min-w-[125px]">No AR & Nilai</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">EM</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">GEM</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">RH</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">HP</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">MCA</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">CFO</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">COO</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">CEO</TableHead>
+                    <TableHead className="w-[85px] text-center font-bold">Chairman</TableHead>
                     <TableHead className="min-w-[140px]">Posisi / Bottleneck</TableHead>
-                    <TableHead className="w-14 text-center">Aksi</TableHead>
+                    <TableHead className="w-12 text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="text-xs">
@@ -524,14 +532,15 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{renderLevelCell(item, 1)}</TableCell>
-                        <TableCell>{renderLevelCell(item, 2)}</TableCell>
-                        <TableCell>{renderLevelCell(item, 3)}</TableCell>
-                        <TableCell>{renderLevelCell(item, 4)}</TableCell>
-                        <TableCell>{renderLevelCell(item, 5)}</TableCell>
-                        <TableCell>{renderLevelCell(item, 6)}</TableCell>
-                        <TableCell>{renderLevelCell(item, 7)}</TableCell>
-                        <TableCell>{renderLevelCell(item, 8)}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "EM")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "GEM")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "RH")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "HP")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "MCA")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "CFO")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "COO")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "CEO")}</TableCell>
+                        <TableCell className="p-2">{renderRoleCell(item, "Chairman")}</TableCell>
                         <TableCell>
                           {item.activeWaitingRole ? (
                             <div className="space-y-1">

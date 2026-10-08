@@ -31,6 +31,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   AFCE_STATUS_CONFIG,
   APPROVAL_STATUS_CONFIG,
+  SAP_APPROVAL_ROLES,
+  normalizeApprovalRoleCode,
 } from "@/lib/constants/status";
 import { cn } from "@/lib/utils";
 import {
@@ -120,14 +122,14 @@ interface AfceTabProps {
 }
 
 export const DEFAULT_APPROVER_ROLES = [
-  "EM (Estate Manager)",
-  "GEM (General Estate Manager)",
-  "RH (Regional Head)",
-  "HP (Head of Plantation)",
-  "MCA (Management Committee/Audit)",
-  "CFO (Chief Financial Officer)",
-  "COO (Chief Operating Officer)",
-  "Chairman (Chair)",
+  "EM",
+  "GEM",
+  "RH",
+  "HP",
+  "MCA",
+  "CFO",
+  "COO",
+  "Chairman",
 ];
 
 export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabProps) {
@@ -277,47 +279,47 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
   ) => {
     if (preset === "budget-low") {
       setActiveApprovals([
-        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 2, role: "GEM (General Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 3, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: "TIDAK_PERLU", notes: "" },
-        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: "TIDAK_PERLU", notes: "" },
-        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: "TIDAK_PERLU", notes: "" },
+        { approvalLevel: 1, role: "EM", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "GEM", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "RH", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO", personName: "", status: "TIDAK_PERLU", notes: "" },
+        { approvalLevel: 7, role: "CEO", personName: "", status: "TIDAK_PERLU", notes: "" },
+        { approvalLevel: 8, role: "Chairman", personName: "", status: "TIDAK_PERLU", notes: "" },
       ]);
     } else if (preset === "budget-high") {
       setActiveApprovals([
-        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 2, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 3, role: "HP (Head of Plantation)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: "TIDAK_PERLU", notes: "" },
+        { approvalLevel: 1, role: "EM", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "RH", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "HP", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 7, role: "CEO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 8, role: "Chairman", personName: "", status: "TIDAK_PERLU", notes: "" },
       ]);
     } else if (preset === "nonbudget-low") {
       setActiveApprovals([
-        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 2, role: "GEM (General Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 3, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: "TIDAK_PERLU", notes: "" },
+        { approvalLevel: 1, role: "EM", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "GEM", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "RH", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 7, role: "CEO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 8, role: "Chairman", personName: "", status: "TIDAK_PERLU", notes: "" },
       ]);
     } else if (preset === "nonbudget-high") {
       setActiveApprovals([
-        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 2, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 3, role: "HP (Head of Plantation)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
-        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 1, role: "EM", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "RH", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "HP", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 7, role: "CEO", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 8, role: "Chairman", personName: "", status: ApprovalStatus.WAITING, notes: "" },
       ]);
     }
   };
@@ -325,11 +327,16 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
   // Handler tambah baris approver
   const handleAddApprover = () => {
     const nextLevel = activeApprovals.length + 1;
+    const existingRoles = new Set(
+      activeApprovals.map((a) => normalizeApprovalRoleCode(a.role))
+    );
+    const nextRole =
+      SAP_APPROVAL_ROLES.find((r) => !existingRoles.has(r.code))?.code || "EM";
     setActiveApprovals([
       ...activeApprovals,
       {
         approvalLevel: nextLevel,
-        role: `Approver Level ${nextLevel}`,
+        role: nextRole,
         personName: "",
         status: ApprovalStatus.WAITING,
         notes: "",
@@ -1023,15 +1030,24 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                         <Label className="text-[11px] text-muted-foreground">
                           Jabatan / Role Approver
                         </Label>
-                        <Input
-                          value={item.role}
-                          onChange={(e) =>
-                            handleUpdateApprover(index, "role", e.target.value)
+                        <Select
+                          value={normalizeApprovalRoleCode(item.role)}
+                          onValueChange={(val) =>
+                            handleUpdateApprover(index, "role", val)
                           }
                           disabled={isCompletedOrCancelled}
-                          placeholder="Contoh: EM (Estate Manager)"
-                          className="h-8 text-xs font-medium"
-                        />
+                        >
+                          <SelectTrigger className="h-8 text-xs font-medium">
+                            <SelectValue placeholder="Pilih Jabatan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SAP_APPROVAL_ROLES.map((r) => (
+                              <SelectItem key={r.code} value={r.code}>
+                                {r.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="space-y-1">

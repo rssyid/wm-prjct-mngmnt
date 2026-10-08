@@ -3,6 +3,7 @@ import {
   PACKAGE_STATUS_CONFIG,
   PAYMENT_STATUS_CONFIG,
   PROJECT_STATUS_CONFIG,
+  normalizeApprovalRoleCode,
 } from "@/lib/constants/status";
 import { formatDate } from "@/lib/utils";
 import {
@@ -259,24 +260,22 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
 
   const rows = items.map((item, index) => {
     const statusLabel = PROJECT_STATUS_CONFIG[item.status]?.label || item.status;
-    const snapL1 = item.snapshots.find((s) => s.level === 1);
-    const snapL2 = item.snapshots.find((s) => s.level === 2);
-    const snapL3 = item.snapshots.find((s) => s.level === 3);
-    const snapL4 = item.snapshots.find((s) => s.level === 4);
-    const snapL5 = item.snapshots.find((s) => s.level === 5);
-    const snapL6 = item.snapshots.find((s) => s.level === 6);
-    const snapL7 = item.snapshots.find((s) => s.level === 7);
-    const snapL8 = item.snapshots.find((s) => s.level === 8);
 
-    const formatSnap = (s?: ApprovalMatrixSnapshotItem) => {
-      if (!s) return "-";
-      if (s.status === "TIDAK_PERLU") return "Tidak Perlu";
-      let res = `[${s.role}] ${s.status === "APPROVED" ? "Disetujui" : s.status === "REJECTED" ? "Ditolak" : "Menunggu"}`;
-      if (s.personName) res += ` - ${s.personName}`;
-      if (s.approvedAt) res += ` (${formatDate(s.approvedAt)})`;
-      else if (s.rejectedAt) res += ` (Ditolak: ${formatDate(s.rejectedAt)})`;
-      else if (s.status === "WAITING" && s.waitingDays > 0) res += ` (${s.waitingDays} hari)`;
-      return res;
+    const formatRoleCell = (roleCode: string) => {
+      const snap = item.snapshots.find(
+        (s) => normalizeApprovalRoleCode(s.role) === roleCode
+      );
+      if (!snap || snap.status === "TIDAK_PERLU") return "-";
+      if (snap.status === "APPROVED") {
+        return snap.approvedAt ? `✓ ${formatDate(snap.approvedAt)}` : "✓";
+      }
+      if (snap.status === "REJECTED") {
+        return snap.rejectedAt ? `✗ Ditolak (${formatDate(snap.rejectedAt)})` : "✗ Ditolak";
+      }
+      if (snap.status === "WAITING") {
+        return snap.waitingDays > 0 ? `Menunggu (${snap.waitingDays} hari)` : "Menunggu";
+      }
+      return "-";
     };
 
     return {
@@ -291,14 +290,15 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
       "Attempt Ke": item.currentAttempt,
       "Status Dokumen AR": item.afceStatus,
       "Tgl Submit Email": item.emailSubmittedDate ? formatDate(item.emailSubmittedDate) : "-",
-      "Level 1": formatSnap(snapL1),
-      "Level 2": formatSnap(snapL2),
-      "Level 3": formatSnap(snapL3),
-      "Level 4": formatSnap(snapL4),
-      "Level 5": formatSnap(snapL5),
-      "Level 6": formatSnap(snapL6),
-      "Level 7": formatSnap(snapL7),
-      "Level 8": formatSnap(snapL8),
+      EM: formatRoleCell("EM"),
+      GEM: formatRoleCell("GEM"),
+      RH: formatRoleCell("RH"),
+      HP: formatRoleCell("HP"),
+      MCA: formatRoleCell("MCA"),
+      CFO: formatRoleCell("CFO"),
+      COO: formatRoleCell("COO"),
+      CEO: formatRoleCell("CEO"),
+      Chairman: formatRoleCell("Chairman"),
       "Approver Tertahan": item.activeWaitingRole || "-",
       "Hari Menunggu": item.activeWaitingDays > 0 ? `${item.activeWaitingDays} Hari` : "-",
       "AR Tambahan (Qty)": item.supplementaryCount,
@@ -319,14 +319,15 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
     { wch: 12 }, // Attempt
     { wch: 18 }, // Status Dokumen
     { wch: 16 }, // Tgl Submit Email
-    { wch: 28 }, // Level 1
-    { wch: 28 }, // Level 2
-    { wch: 28 }, // Level 3
-    { wch: 28 }, // Level 4
-    { wch: 28 }, // Level 5
-    { wch: 28 }, // Level 6
-    { wch: 28 }, // Level 7
-    { wch: 28 }, // Level 8
+    { wch: 14 }, // EM
+    { wch: 14 }, // GEM
+    { wch: 14 }, // RH
+    { wch: 14 }, // HP
+    { wch: 14 }, // MCA
+    { wch: 14 }, // CFO
+    { wch: 14 }, // COO
+    { wch: 14 }, // CEO
+    { wch: 14 }, // Chairman
     { wch: 22 }, // Approver Tertahan
     { wch: 14 }, // Hari Menunggu
     { wch: 16 }, // Supplementary
