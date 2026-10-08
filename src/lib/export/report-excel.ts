@@ -5,7 +5,13 @@ import {
   PROJECT_STATUS_CONFIG,
 } from "@/lib/constants/status";
 import { formatDate } from "@/lib/utils";
-import { PackageCategory, PackageStatus, PaymentStatus, ProjectStatus } from "@prisma/client";
+import {
+  PackageCategory,
+  PackageStatus,
+  PaymentStatus,
+  ProjectStatus,
+  StatusIndicator,
+} from "@prisma/client";
 
 export interface OutstandingProcurementItem {
   id: string;
@@ -167,3 +173,291 @@ export async function exportBudgetRealizationExcel(
   const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "");
   XLSX.writeFile(workbook, `Laporan_Realisasi_Anggaran_${dateStamp}.xlsx`);
 }
+
+export interface ApprovalMatrixSnapshotItem {
+  level: number;
+  role: string;
+  personName: string | null;
+  status: string;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  notes: string | null;
+  waitingDays: number;
+}
+
+export interface ApprovalMatrixItem {
+  id: string;
+  projectCode: string;
+  projectName: string;
+  companyId: string;
+  companyName: string;
+  companyCode: string;
+  regionName: string;
+  status: ProjectStatus;
+  noAr: string;
+  approvedAmount: number;
+  currentAttempt: number;
+  afceStatus: string;
+  emailSubmittedDate: string | null;
+  mcaApprovalDate: string | null;
+  snapshots: ApprovalMatrixSnapshotItem[];
+  activeWaitingRole: string | null;
+  activeWaitingDays: number;
+  hasRejection: boolean;
+  supplementaryCount: number;
+}
+
+export interface WorkPackageProgressItem {
+  id: string;
+  packageName: string;
+  category: PackageCategory;
+  vendorName: string;
+  weightPct: number;
+  progressPct: number;
+  targetQuantity: number | null;
+  volumeAchieved: number | null;
+  uom: string | null;
+  status: PackageStatus;
+  paymentStatus: PaymentStatus;
+  estDeliveryDate: string | null;
+  actualDeliveryDate: string | null;
+  isDelayed: boolean;
+}
+
+export interface ProjectProgressItem {
+  id: string;
+  projectCode: string;
+  projectName: string;
+  companyId: string;
+  companyName: string;
+  companyCode: string;
+  regionName: string;
+  status: ProjectStatus;
+  statusIndicator: StatusIndicator;
+  progressPct: number;
+  targetQuantity: number | null;
+  uom: string | null;
+  targetStartDate: string | null;
+  targetEndDate: string | null;
+  milestones: {
+    survey: { status: "DONE" | "IN_PROGRESS" | "PENDING"; date?: string | null };
+    rab: { status: "READY" | "DRAFT" | "PENDING" };
+    approval: { status: "APPROVED" | "WAITING" | "REJECTED" | "PENDING"; noAr?: string };
+    procurement: { status: "DELIVERED" | "PO_ISSUED" | "PR_SUBMITTED" | "PENDING"; totalPackages: number; deliveredPackages: number };
+    execution: { status: "IN_PROGRESS" | "COMPLETED" | "PENDING"; progressPct: number };
+    bast: { status: "VERIFIED" | "WAITING_VERIFICATION" | "NOT_SUBMITTED"; bastNumber?: string; verifiedAt?: string | null };
+  };
+  workPackages: WorkPackageProgressItem[];
+}
+
+/**
+ * Ekspor Matriks Persetujuan Proyek ke format Excel (.xlsx)
+ */
+export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
+  const XLSX = await import("xlsx");
+
+  const rows = items.map((item, index) => {
+    const statusLabel = PROJECT_STATUS_CONFIG[item.status]?.label || item.status;
+    const snapL1 = item.snapshots.find((s) => s.level === 1);
+    const snapL2 = item.snapshots.find((s) => s.level === 2);
+    const snapL3 = item.snapshots.find((s) => s.level === 3);
+    const snapL4 = item.snapshots.find((s) => s.level === 4);
+
+    const formatSnap = (s?: ApprovalMatrixSnapshotItem) => {
+      if (!s) return "-";
+      let res = `[${s.status}] ${s.role}`;
+      if (s.personName) res += ` - ${s.personName}`;
+      if (s.approvedAt) res += ` (${formatDate(s.approvedAt)})`;
+      else if (s.rejectedAt) res += ` (Ditolak: ${formatDate(s.rejectedAt)})`;
+      else if (s.status === "WAITING" && s.waitingDays > 0) res += ` (${s.waitingDays} hari)`;
+      return res;
+    };
+
+    return {
+      No: index + 1,
+      "Kode Proyek": item.projectCode,
+      "Nama Proyek": item.projectName,
+      Perusahaan: item.companyName,
+      Wilayah: item.regionName,
+      "Status Proyek": statusLabel,
+      "No AR": item.noAr || "-",
+      "Nilai Pengajuan (Rp)": item.approvedAmount,
+      "Attempt Ke": item.currentAttempt,
+      "Status Dokumen AR": item.afceStatus,
+      "Tgl Submit Email": item.emailSubmittedDate ? formatDate(item.emailSubmittedDate) : "-",
+      "Level 1 (PIC/Estate)": formatSnap(snapL1),
+      "Level 2 (Area/Dept)": formatSnap(snapL2),
+      "Level 3 (GM/HO)": formatSnap(snapL3),
+      "Level 4 (Direktur/MCA)": formatSnap(snapL4),
+      "Approver Tertahan": item.activeWaitingRole || "-",
+      "Hari Menunggu": item.activeWaitingDays > 0 ? `${item.activeWaitingDays} Hari` : "-",
+      "AR Tambahan (Qty)": item.supplementaryCount,
+      "Ada Penolakan / Revisi": item.hasRejection ? "Ya (Pernah Ditolak)" : "Tidak",
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet["!cols"] = [
+    { wch: 5 },  // No
+    { wch: 22 }, // Kode Proyek
+    { wch: 32 }, // Nama Proyek
+    { wch: 20 }, // Perusahaan
+    { wch: 18 }, // Wilayah
+    { wch: 18 }, // Status Proyek
+    { wch: 18 }, // No AR
+    { wch: 22 }, // Nilai Pengajuan
+    { wch: 12 }, // Attempt
+    { wch: 18 }, // Status Dokumen
+    { wch: 16 }, // Tgl Submit Email
+    { wch: 30 }, // Level 1
+    { wch: 30 }, // Level 2
+    { wch: 30 }, // Level 3
+    { wch: 30 }, // Level 4
+    { wch: 22 }, // Approver Tertahan
+    { wch: 14 }, // Hari Menunggu
+    { wch: 16 }, // Supplementary
+    { wch: 22 }, // Ada Penolakan
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Matriks Persetujuan");
+
+  const now = new Date();
+  const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "");
+  XLSX.writeFile(workbook, `Laporan_Matriks_Persetujuan_${dateStamp}.xlsx`);
+}
+
+/**
+ * Ekspor Progres Siklus Proyek & Paket Kerja ke format Excel (.xlsx)
+ * Menghasilkan 2 sheet: "Siklus Proyek" dan "Rincian Paket Kerja"
+ */
+export async function exportProjectProgressExcel(items: ProjectProgressItem[]) {
+  const XLSX = await import("xlsx");
+
+  // Sheet 1: Siklus Proyek
+  const summaryRows = items.map((item, index) => {
+    const statusLabel = PROJECT_STATUS_CONFIG[item.status]?.label || item.status;
+    return {
+      No: index + 1,
+      "Kode Proyek": item.projectCode,
+      "Nama Proyek": item.projectName,
+      Perusahaan: item.companyName,
+      Wilayah: item.regionName,
+      "Status Proyek": statusLabel,
+      "Indikator EWS": item.statusIndicator,
+      "Progres Aktual (%)": item.progressPct,
+      "Fase 1: Survei": item.milestones.survey.status,
+      "Fase 2: RAB": item.milestones.rab.status,
+      "Fase 3: Approval AR": item.milestones.approval.status,
+      "Fase 4: Pengadaan": `${item.milestones.procurement.status} (${item.milestones.procurement.deliveredPackages}/${item.milestones.procurement.totalPackages} paket tiba)`,
+      "Fase 5: Eksekusi Lapangan": `${item.milestones.execution.status} (${item.milestones.execution.progressPct}%)`,
+      "Fase 6: Serah Terima BAST": item.milestones.bast.status,
+      "No BAST": item.milestones.bast.bastNumber || "-",
+      "Tgl Verifikasi BAST": item.milestones.bast.verifiedAt ? formatDate(item.milestones.bast.verifiedAt) : "-",
+      "Target Mulai": item.targetStartDate ? formatDate(item.targetStartDate) : "-",
+      "Target Selesai": item.targetEndDate ? formatDate(item.targetEndDate) : "-",
+    };
+  });
+
+  const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+  summarySheet["!cols"] = [
+    { wch: 5 },
+    { wch: 22 },
+    { wch: 32 },
+    { wch: 20 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 26 },
+    { wch: 26 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 16 },
+  ];
+
+  // Sheet 2: Rincian Paket Kerja
+  const packageRows: Record<string, unknown>[] = [];
+  let pkgIdx = 1;
+  for (const item of items) {
+    if (!item.workPackages || item.workPackages.length === 0) {
+      packageRows.push({
+        No: pkgIdx++,
+        "Kode Proyek": item.projectCode,
+        "Nama Proyek": item.projectName,
+        Perusahaan: item.companyName,
+        "Nama Paket": "(Belum ada paket kerja)",
+        Kategori: "-",
+        Vendor: "-",
+        "Bobot (%)": 0,
+        "Progres (%)": 0,
+        "Target Volume": "-",
+        "Realisasi Volume": "-",
+        Satuan: "-",
+        "Status Paket": "-",
+        "Status Pembayaran": "-",
+        "Estimasi Tiba": "-",
+        "Tiba Terakhir": "-",
+        "Keterlambatan": "-",
+      });
+    } else {
+      for (const pkg of item.workPackages) {
+        packageRows.push({
+          No: pkgIdx++,
+          "Kode Proyek": item.projectCode,
+          "Nama Proyek": item.projectName,
+          Perusahaan: item.companyName,
+          "Nama Paket": pkg.packageName,
+          Kategori: PACKAGE_CATEGORY_CONFIG[pkg.category]?.label || pkg.category,
+          Vendor: pkg.vendorName || "-",
+          "Bobot (%)": pkg.weightPct,
+          "Progres (%)": pkg.progressPct,
+          "Target Volume": pkg.targetQuantity ?? "-",
+          "Realisasi Volume": pkg.volumeAchieved ?? "-",
+          Satuan: pkg.uom || "-",
+          "Status Paket": PACKAGE_STATUS_CONFIG[pkg.status]?.label || pkg.status,
+          "Status Pembayaran": PAYMENT_STATUS_CONFIG[pkg.paymentStatus]?.label || pkg.paymentStatus,
+          "Estimasi Tiba": pkg.estDeliveryDate ? formatDate(pkg.estDeliveryDate) : "-",
+          "Tiba Terakhir": pkg.actualDeliveryDate ? formatDate(pkg.actualDeliveryDate) : "-",
+          "Keterlambatan": pkg.isDelayed ? "Terlambat" : "Tepat Waktu",
+        });
+      }
+    }
+  }
+
+  const packageSheet = XLSX.utils.json_to_sheet(packageRows);
+  packageSheet["!cols"] = [
+    { wch: 5 },
+    { wch: 22 },
+    { wch: 32 },
+    { wch: 20 },
+    { wch: 28 },
+    { wch: 16 },
+    { wch: 24 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 10 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 16 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, summarySheet, "Siklus Proyek");
+  XLSX.utils.book_append_sheet(workbook, packageSheet, "Rincian Paket Kerja");
+
+  const now = new Date();
+  const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "");
+  XLSX.writeFile(workbook, `Laporan_Progres_Proyek_${dateStamp}.xlsx`);
+}
+

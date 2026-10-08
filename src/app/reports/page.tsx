@@ -1,53 +1,35 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { ReportExportSection } from "@/components/reports/report-export-section";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ReportsView } from "@/components/reports/reports-view";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { BarChart3 } from "lucide-react";
 import { getServerSession } from "next-auth";
-import dynamic from "next/dynamic";
-import React from "react";
+import React, { Suspense } from "react";
 
 export const metadata = {
   title: "Laporan & Portofolio Proyek | WM PRJCT MNGMNT",
 };
 
-// Lazy load PortfolioGanttChart sesuai aturan docs/design.md §4
-const PortfolioGanttChart = dynamic(
-  () =>
-    import("@/components/reports/portfolio-gantt-chart").then(
-      (m) => m.PortfolioGanttChart
-    ),
-  {
-    loading: () => <PortfolioGanttSkeleton />,
-    ssr: false,
-  }
-);
-
-function PortfolioGanttSkeleton() {
-  return (
-    <Card className="border-border shadow-xs">
-      <CardHeader className="pb-3">
-        <Skeleton className="h-5 w-56 mb-1" />
-        <Skeleton className="h-3 w-80" />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default async function ReportsPage() {
   const session = await getServerSession(authOptions);
+
+  // Ambil daftar perusahaan aktif dan region untuk filter terpadu
+  const companies = await prisma.company.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      region: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [{ name: "asc" }],
+  });
 
   return (
     <AppShell user={session?.user}>
@@ -64,19 +46,15 @@ export default async function ReportsPage() {
               </h1>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Visualisasi terpadu jadwal portofolio, timeline proyek aktif, dan ringkasan ekspor laporan.
+              Pusat kendali laporan: Overview jadwal portofolio, matriks persetujuan dokumen AR, serta pemantauan progres siklus hidup & bagian kerja.
             </p>
           </div>
         </div>
 
-        {/* 1. Timeline Portofolio Proyek Aktif */}
-        <PortfolioGanttChart
-          title="Timeline Portofolio Seluruh Proyek"
-          description="Pantau sebaran jadwal dan deviasi seluruh proyek aktif dalam satu timeline interaktif."
-        />
-
-        {/* 2. Modul Ekspor Laporan Manajemen (F-09) */}
-        <ReportExportSection />
+        {/* Tab Laporan (Overview | Persetujuan | Progress) */}
+        <Suspense fallback={<div className="h-40 animate-pulse bg-muted/40 rounded-lg" />}>
+          <ReportsView companies={companies} />
+        </Suspense>
       </div>
     </AppShell>
   );
