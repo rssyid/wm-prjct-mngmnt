@@ -14,11 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { parseGeoFile } from "@/lib/geo";
 import { projectInputSchema, type ProjectInput } from "@/lib/validations/project.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BudgetType, LocationType } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, ArrowLeft, Loader2, Save } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  FileUp,
+  Layers,
+  Loader2,
+  Save,
+  Trash2,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -78,6 +89,13 @@ export default function NewProjectPage() {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [geoFileLoading, setGeoFileLoading] = useState(false);
+  const [geoFileError, setGeoFileError] = useState<string | null>(null);
+  const [geoFileInfo, setGeoFileInfo] = useState<{
+    name: string;
+    featureCount: number;
+    geometryType: string;
+  } | null>(null);
 
   // Fetch data referensi master untuk form
   const { data: companiesData } = useQuery<{ success: boolean; data: HierarchyCompany[] }>({
@@ -145,6 +163,7 @@ export default function NewProjectPage() {
       uom: "unit",
       latitude: null,
       longitude: null,
+      geoCoordinates: null,
       sitePlanUrl: null,
       drawingUrl: null,
       boqItems: [],
@@ -156,6 +175,8 @@ export default function NewProjectPage() {
   const selectedStructureTypeId = watch("structureTypeId");
   const currentLatitude = watch("latitude");
   const currentLongitude = watch("longitude");
+  const currentLocationType = watch("locationType");
+  const currentGeoCoordinates = watch("geoCoordinates");
   const currentBoqItems = watch("boqItems") || [];
 
   // Filter cascading
@@ -166,6 +187,41 @@ export default function NewProjectPage() {
 
   const selectedStructure = structures.find((s) => s.id === selectedStructureTypeId);
   const availableVariants = selectedStructure?.variants || [];
+
+  // Handle upload file GeoJSON / Shapefile ZIP
+  const handleGeoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGeoFileError(null);
+    setGeoFileLoading(true);
+
+    try {
+      const parsed = await parseGeoFile(file);
+      setValue("geoCoordinates", parsed.geoJson);
+      setValue("locationType", parsed.locationType);
+      setValue("latitude", parsed.center.lat);
+      setValue("longitude", parsed.center.lng);
+      setGeoFileInfo({
+        name: parsed.fileName,
+        featureCount: parsed.featureCount,
+        geometryType: parsed.geometryType,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal memproses file spasial";
+      setGeoFileError(msg);
+    } finally {
+      setGeoFileLoading(false);
+      e.target.value = "";
+    }
+  };
+
+  // Handle reset file geometri kembali ke mode titik manual
+  const handleClearGeoFile = () => {
+    setValue("geoCoordinates", null);
+    setValue("locationType", LocationType.POINT);
+    setGeoFileInfo(null);
+    setGeoFileError(null);
+  };
 
   // Handle auto populate template BOQ saat varian dipilih
   const handleVariantSelect = (variantId: string) => {
@@ -454,6 +510,110 @@ export default function NewProjectPage() {
                 </div>
               </div>
 
+              {/* Unggah Berkas Spasial (GeoJSON / Shapefile) — Opsional */}
+              <div className="rounded-lg border border-border/80 bg-muted/20 p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
+                      <Layers className="h-4 w-4 text-primary" />
+                      <span>Berkas Geometri Spasial (Opsional)</span>
+                      <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal">
+                        GeoJSON / Shapefile ZIP
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Unggah berkas batas poligon atau jalur saluran (format <code>.geojson</code>, <code>.json</code>, atau Shapefile <code>.zip</code>).
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".geojson,.json,.zip"
+                        className="hidden"
+                        onChange={handleGeoFileUpload}
+                        disabled={geoFileLoading}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 pointer-events-none"
+                        disabled={geoFileLoading}
+                      >
+                        {geoFileLoading ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Membaca Berkas...
+                          </>
+                        ) : (
+                          <>
+                            <FileUp className="h-3.5 w-3.5 text-primary" />
+                            Upload GeoJSON / Shapefile
+                          </>
+                        )}
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+
+                {geoFileError && (
+                  <div className="rounded-md bg-destructive/15 p-2.5 text-xs text-destructive flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{geoFileError}</span>
+                  </div>
+                )}
+
+                {geoFileInfo && (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30 p-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                      <div>
+                        <span className="font-semibold">{geoFileInfo.name}</span>
+                        <span className="text-[11px] opacity-80 ml-2">
+                          ({geoFileInfo.geometryType} · {geoFileInfo.featureCount} fitur terdeteksi)
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearGeoFile}
+                      className="h-7 text-xs text-destructive hover:bg-destructive/10 px-2 gap-1"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Hapus Geometri
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-4 text-xs pt-1 border-t border-border/50">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Tipe Geometri:</Label>
+                    <Select
+                      value={currentLocationType}
+                      onValueChange={(val) => setValue("locationType", val as LocationType)}
+                    >
+                      <SelectTrigger className="h-7 text-xs w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={LocationType.POINT}>POINT (Titik)</SelectItem>
+                        <SelectItem value={LocationType.LINE}>LINE (Jalur/Garis)</SelectItem>
+                        <SelectItem value={LocationType.POLYGON}>POLYGON (Area)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    {currentLocationType === LocationType.POINT && "Mode titik tunggal pada peta."}
+                    {currentLocationType === LocationType.LINE && "Mode jalur/saluran air panjang."}
+                    {currentLocationType === LocationType.POLYGON && "Mode bidang area/blok poligon."}
+                  </span>
+                </div>
+              </div>
+
               {/* Koordinat & Peta Leaflet */}
               <div className="space-y-3 pt-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -495,6 +655,7 @@ export default function NewProjectPage() {
                   <MapPicker
                     latitude={currentLatitude}
                     longitude={currentLongitude}
+                    geoCoordinates={currentGeoCoordinates}
                     onChange={({ lat, lng }) => {
                       setValue("latitude", lat);
                       setValue("longitude", lng);

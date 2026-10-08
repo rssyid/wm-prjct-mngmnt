@@ -1,5 +1,6 @@
 "use client";
 
+import type { GeoJsonObject } from "geojson";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import React, { useEffect, useRef } from "react";
@@ -7,6 +8,7 @@ import React, { useEffect, useRef } from "react";
 interface MapPickerProps {
   latitude?: number | null;
   longitude?: number | null;
+  geoCoordinates?: GeoJsonObject | null;
   onChange: (coords: { lat: number; lng: number }) => void;
   className?: string;
 }
@@ -36,12 +38,14 @@ const customPinIcon = L.divIcon({
 export default function MapPicker({
   latitude,
   longitude,
+  geoCoordinates,
   onChange,
   className = "h-[320px] w-full rounded-md border border-border overflow-hidden",
 }: MapPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const onChangeRef = useRef(onChange);
 
   useEffect(() => {
@@ -149,11 +153,49 @@ export default function MapPicker({
     }
   }, [latitude, longitude, currentLat, currentLng, hasCoords]);
 
+  // Sinkronisasi layer GeoJSON ketika geoCoordinates berubah
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    if (geoJsonLayerRef.current) {
+      mapInstanceRef.current.removeLayer(geoJsonLayerRef.current);
+      geoJsonLayerRef.current = null;
+    }
+
+    if (geoCoordinates) {
+      try {
+        const layer = L.geoJSON(geoCoordinates, {
+          style: {
+            color: "#0284c7",
+            weight: 3,
+            opacity: 0.9,
+            fillColor: "#0284c7",
+            fillOpacity: 0.25,
+          },
+        }).addTo(mapInstanceRef.current);
+
+        geoJsonLayerRef.current = layer;
+
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) {
+          mapInstanceRef.current.fitBounds(bounds, {
+            padding: [24, 24],
+            maxZoom: 16,
+          });
+        }
+      } catch (err) {
+        console.error("Gagal merender layer GeoJSON:", err);
+      }
+    }
+  }, [geoCoordinates]);
+
   return (
     <div className="relative space-y-1">
       <div ref={mapContainerRef} className={className} />
       <p className="text-xs text-muted-foreground">
-        Klik pada peta atau seret pin untuk menentukan koordinat lokasi proyek.
+        {geoCoordinates
+          ? "Geometri file ditampilkan di peta. Anda tetap dapat menyeret pin untuk menetapkan titik acuan koordinat utama."
+          : "Klik pada peta atau seret pin untuk menentukan koordinat lokasi proyek."}
       </p>
     </div>
   );
