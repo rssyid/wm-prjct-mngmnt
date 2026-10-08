@@ -80,6 +80,10 @@ export async function listProjectPackages(projectId: string) {
           },
         },
       },
+      heavyEquipmentLogs: {
+        where: { deletedAt: null },
+        select: { workVolume: true },
+      },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -122,10 +126,23 @@ export async function listProjectPackages(projectId: string) {
       pkg.project?.uom ||
       null;
 
+    const equipmentVolumeAchieved = pkg.heavyEquipmentLogs.reduce(
+      (sum, el) => sum + (Number(el.workVolume) || 0),
+      0
+    );
+
+    const effectiveVolumeAchieved =
+      pkg.volumeAchieved !== null && pkg.volumeAchieved !== undefined
+        ? Number(pkg.volumeAchieved)
+        : equipmentVolumeAchieved > 0
+        ? equipmentVolumeAchieved
+        : null;
+
     return {
       ...pkg,
       targetQuantity: effectiveTargetQty,
       uom: effectiveUom,
+      volumeAchieved: effectiveVolumeAchieved,
       totalPlannedQty,
       totalReceivedQty,
       deliveryDelayDays,
@@ -187,6 +204,10 @@ export async function getPackageById(projectId: string, packageId: string) {
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
       },
+      heavyEquipmentLogs: {
+        where: { deletedAt: null },
+        select: { workVolume: true },
+      },
     },
   });
 
@@ -222,10 +243,23 @@ export async function getPackageById(projectId: string, packageId: string) {
     pkg.project?.uom ||
     null;
 
+  const equipmentVolumeAchieved = pkg.heavyEquipmentLogs.reduce(
+    (sum, el) => sum + (Number(el.workVolume) || 0),
+    0
+  );
+
+  const effectiveVolumeAchieved =
+    pkg.volumeAchieved !== null && pkg.volumeAchieved !== undefined
+      ? Number(pkg.volumeAchieved)
+      : equipmentVolumeAchieved > 0
+      ? equipmentVolumeAchieved
+      : null;
+
   return {
     ...pkg,
     targetQuantity: effectiveTargetQty,
     uom: effectiveUom,
+    volumeAchieved: effectiveVolumeAchieved,
     totalPlannedQty,
     totalReceivedQty,
     deliveryDelayDays,

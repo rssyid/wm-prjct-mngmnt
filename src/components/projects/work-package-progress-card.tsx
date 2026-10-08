@@ -566,6 +566,25 @@ export function WorkPackageProgressCard({
                     {uomLabel}
                   </div>
                 </div>
+
+                {equipmentStats && equipmentStats.totalWorkVolume > 0 && (
+                  <div className="flex items-center justify-between p-1.5 rounded bg-primary/5 border border-primary/20 text-xs mt-1">
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span>Alat Berat: <strong className="text-foreground">{equipmentStats.totalWorkVolume} {uomLabel}</strong></span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleVolumeChange(String(equipmentStats.totalWorkVolume))}
+                      className="h-6 text-[10px] px-2 font-medium text-primary hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Sparkles className="mr-1 h-3 w-3" />
+                      Gunakan Realisasi Alat
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* 4. Progres Kumulatif (%) */}
@@ -922,6 +941,25 @@ export function WorkPackageProgressCard({
                 </div>
               </div>
             </div>
+
+            {equipmentStats && equipmentStats.totalWorkVolume > 0 && (
+              <div className="flex items-center justify-between p-1.5 rounded bg-primary/5 border border-primary/20 text-xs">
+                <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span>Alat Berat: <strong className="text-foreground">{equipmentStats.totalWorkVolume} {uomLabel}</strong></span>
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEditVolumeChange(String(equipmentStats.totalWorkVolume))}
+                  className="h-6 text-[10px] px-2 font-medium text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  Gunakan Realisasi Alat
+                </Button>
+              </div>
+            )}
 
             {targetQty && targetQty > 0 && (
               <div className="rounded-md bg-muted/50 p-2 text-[11px] text-muted-foreground flex items-center justify-between border border-border/60">

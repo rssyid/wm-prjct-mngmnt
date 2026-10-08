@@ -136,6 +136,21 @@ export function EquipmentLogTable({
     }
   };
 
+  // Seluruh log alat berat untuk paket terpilih
+  const selectedWpEquipmentLogs = useMemo(() => {
+    if (!selectedWpId || selectedWpId === "none") return [];
+    return logs.filter((l) => l.workPackageId === selectedWpId);
+  }, [selectedWpId, logs]);
+
+  // Total volume kerja dari log alat berat yang sudah dicatat sebelumnya
+  const totalRecordedEquipmentVolume = useMemo(() => {
+    return selectedWpEquipmentLogs.reduce((sum, l) => {
+      // Jika sedang edit, kurangi volume log yang sedang diedit agar tidak terhitung ganda
+      if (editingLog && l.id === editingLog.id) return sum;
+      return sum + (Number(l.workVolume) || 0);
+    }, 0);
+  }, [selectedWpEquipmentLogs, editingLog]);
+
   // Statistik Target Rencana vs Akumulasi Realisasi untuk paket terpilih
   const wpStats = useMemo(() => {
     if (!selectedWp) return null;
@@ -143,7 +158,12 @@ export function EquipmentLogTable({
       selectedWp.targetQuantity !== null && selectedWp.targetQuantity !== undefined
         ? Number(selectedWp.targetQuantity)
         : selectedWp.totalPlannedQty || 0;
-    const currentAchieved = selectedWp.volumeAchieved || 0;
+
+    // Akumulasi realisasi dari log alat berat yang ada, sinkron dengan volumeAchieved
+    const currentAchieved = Math.max(
+      totalRecordedEquipmentVolume,
+      selectedWp.volumeAchieved || 0
+    );
     const remaining = target > 0 ? Math.max(0, Math.round((target - currentAchieved) * 100) / 100) : null;
     const inputVol = parseFloat(workVolume) || 0;
     const projectedAchieved = Math.round((currentAchieved + inputVol) * 100) / 100;
@@ -162,8 +182,9 @@ export function EquipmentLogTable({
       remaining,
       projectedAchieved,
       projectedRemaining,
+      recordedLogCount: selectedWpEquipmentLogs.length,
     };
-  }, [selectedWp, workVolume, volumeUnit]);
+  }, [selectedWp, totalRecordedEquipmentVolume, selectedWpEquipmentLogs.length, workVolume, volumeUnit]);
 
   // Perhitungan preview jam kerja di client (HM bersifat opsional)
   const calculatedHours = useMemo(() => {
@@ -533,9 +554,19 @@ export function EquipmentLogTable({
                         : wp.totalPlannedQty;
                     const wpUom =
                       wp.uom || wp.items?.[0]?.item?.uom?.code || "unit";
+                    const wpRecordedVol = logs
+                      .filter((l) => l.workPackageId === wp.id)
+                      .reduce((sum, l) => sum + (Number(l.workVolume) || 0), 0);
+                    const wpAchieved = Math.max(wpRecordedVol, wp.volumeAchieved || 0);
+                    const wpRemaining = wpQty
+                      ? Math.max(0, Math.round((wpQty - wpAchieved) * 100) / 100)
+                      : null;
                     return (
                       <SelectItem key={wp.id} value={wp.id}>
-                        {wp.packageName} {wpQty ? `(${wpQty} ${wpUom})` : ""}
+                        {wp.packageName}{" "}
+                        {wpQty
+                          ? `(Realisasi: ${wpAchieved}/${wpQty} ${wpUom} · Sisa: ${wpRemaining} ${wpUom})`
+                          : ""}
                       </SelectItem>
                     );
                   })}
@@ -557,6 +588,11 @@ export function EquipmentLogTable({
                       <div className="font-bold text-primary">
                         {wpStats.currentAchieved} {wpStats.uom}
                       </div>
+                      {wpStats.recordedLogCount > 0 && (
+                        <div className="text-[9px] text-muted-foreground font-normal">
+                          ({wpStats.recordedLogCount} log alat)
+                        </div>
+                      )}
                     </div>
                     <div className="p-1.5 rounded bg-muted/40 border border-border/60">
                       <div className="text-[10px] text-muted-foreground font-medium">Sisa Rencana</div>
