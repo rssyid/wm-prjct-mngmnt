@@ -28,6 +28,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { PackageCategory, PackageDocType, PaymentStatus } from "@prisma/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUploadButton } from "@/components/ui/file-upload-button";
+import { toProxyUrl } from "@/lib/r2-url";
 import {
   AlertCircle,
   AlertTriangle,
@@ -1251,7 +1252,7 @@ export function PackageDetailDialog({
                                 className="h-7 px-2 text-xs gap-1"
                               >
                                 <a
-                                  href={doc.fileUrl}
+                                  href={toProxyUrl(doc.fileUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   title="Buka Dokumen di Tab Baru"

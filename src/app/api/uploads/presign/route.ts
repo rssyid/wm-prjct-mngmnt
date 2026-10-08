@@ -1,6 +1,6 @@
 import { AppError, apiSuccess, handleApiError } from "@/lib/api-error";
 import { checkPresignRateLimit } from "@/lib/ratelimit";
-import { getR2BucketName, getR2Client, getR2PublicBaseUrl } from "@/lib/r2";
+import { getR2BucketName, getR2Client } from "@/lib/r2";
 import { requireRole } from "@/server/auth-guard";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
     });
 
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
-    const publicBaseUrl = getR2PublicBaseUrl();
-    const publicUrl = `${publicBaseUrl}/${objectKey}`;
+    // Gunakan proxy route /api/files/ agar tidak bergantung pada r2.dev (SSL issue)
+    const publicUrl = `/api/files/${objectKey}`;
 
     return apiSuccess({
       uploadUrl,

@@ -36,3 +36,6 @@ export function getR2PublicBaseUrl(): string {
   const url = process.env.R2_PUBLIC_BASE_URL || "";
   return url.replace(/\/+$/, "");
 }
+
+export { toProxyUrl } from "@/lib/r2-url";
+

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { uploadFileToR2, UploadOptions } from "@/lib/upload";
+import { toProxyUrl } from "@/lib/r2-url";
 import {
   AlertCircle,
   ExternalLink,
@@ -107,7 +108,7 @@ export function FileUploadButton({
           <div className="flex items-center gap-2 min-w-0">
             <FileText className="h-4 w-4 shrink-0 text-primary" />
             <a
-              href={value}
+              href={toProxyUrl(value)}
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-foreground hover:text-primary hover:underline truncate max-w-[220px] sm:max-w-[320px]"
@@ -125,7 +126,7 @@ export function FileUploadButton({
               asChild
               className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
             >
-              <a href={value} target="_blank" rel="noopener noreferrer" title="Buka tautan">
+              <a href={toProxyUrl(value)} target="_blank" rel="noopener noreferrer" title="Buka tautan">
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </Button>

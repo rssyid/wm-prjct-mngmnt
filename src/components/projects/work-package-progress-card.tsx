@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/utils";
+import { toProxyUrl } from "@/lib/r2-url";
 import { PackageCategory } from "@prisma/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -604,7 +605,7 @@ export function WorkPackageProgressCard({
                               {log.photos.slice(0, 3).map((photoUrl, pIdx) => (
                                 <a
                                   key={pIdx}
-                                  href={photoUrl}
+                                  href={toProxyUrl(photoUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   title="Buka foto dokumentasi"
@@ -612,7 +613,7 @@ export function WorkPackageProgressCard({
                                 >
                                   {/* Native img tag - TANPA next/image optimizer sesuai aturan STACK.md §4 */}
                                   <img
-                                    src={photoUrl}
+                                    src={toProxyUrl(photoUrl)}
                                     alt={`Foto ${pIdx + 1}`}
                                     loading="lazy"
                                     className="h-full w-full object-cover"

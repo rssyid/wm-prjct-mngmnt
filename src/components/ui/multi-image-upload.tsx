@@ -3,6 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { uploadFileToR2 } from "@/lib/upload";
+import { toProxyUrl } from "@/lib/r2-url";
 import {
   AlertCircle,
   Camera,
@@ -173,7 +174,7 @@ export function MultiImageUpload({
             >
               {/* Native img tag - TANPA next/image optimizer sesuai aturan STACK.md §4 & Rules.md §7 */}
               <img
-                src={url}
+                src={toProxyUrl(url)}
                 alt={`Dokumentasi Lapangan ${idx + 1}`}
                 loading="lazy"
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
@@ -182,7 +183,7 @@ export function MultiImageUpload({
               {/* Overlay Actions */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
                 <a
-                  href={url}
+                  href={toProxyUrl(url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-7 w-7 rounded bg-black/60 text-white flex items-center justify-center hover:bg-black/90 transition-colors"
