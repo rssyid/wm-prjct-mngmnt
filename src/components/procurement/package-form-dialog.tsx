@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -334,14 +335,13 @@ export function PackageFormDialog({
               <Label htmlFor="weightPct" className="text-xs">
                 Bobot Proyek (% dari Total 100) *
               </Label>
-              <Input
+              <FormattedNumberInput
                 id="weightPct"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
+                allowDecimals
+                suffix="%"
+                placeholder="0"
                 value={weightPct}
-                onChange={(e) => setWeightPct(e.target.value)}
+                onChange={(val) => setWeightPct(val !== null ? String(val) : "0")}
                 required
               />
             </div>
@@ -350,14 +350,12 @@ export function PackageFormDialog({
               <Label htmlFor="targetQuantity" className="text-xs">
                 Target Volume / Kuantitas
               </Label>
-              <Input
+              <FormattedNumberInput
                 id="targetQuantity"
-                type="number"
-                step="any"
-                min="0"
+                allowDecimals
                 placeholder="misal: 500"
                 value={targetQuantity}
-                onChange={(e) => setTargetQuantity(e.target.value)}
+                onChange={(val) => setTargetQuantity(val !== null ? String(val) : "")}
               />
             </div>
 
@@ -485,13 +483,12 @@ export function PackageFormDialog({
                 <Label htmlFor="contractOrPoAmount" className="text-xs">
                   Nilai Kontrak / PO (Rp)
                 </Label>
-                <Input
+                <FormattedNumberInput
                   id="contractOrPoAmount"
-                  type="number"
-                  min="0"
-                  step="any"
+                  prefix="Rp "
+                  placeholder="0"
                   value={contractOrPoAmount}
-                  onChange={(e) => setContractOrPoAmount(e.target.value)}
+                  onChange={(val) => setContractOrPoAmount(val !== null ? String(val) : "0")}
                 />
               </div>
 

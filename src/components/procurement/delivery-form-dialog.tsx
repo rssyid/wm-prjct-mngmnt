@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -136,11 +137,10 @@ export function DeliveryFormDialog({
     },
   });
 
-  const handleQtyChange = (itemId: string, value: string) => {
-    const num = parseFloat(value);
+  const handleQtyChange = (itemId: string, value: number | null) => {
     setItemQuantities((prev) => ({
       ...prev,
-      [itemId]: isNaN(num) ? 0 : Math.max(0, num),
+      [itemId]: value !== null && !isNaN(value) ? Math.max(0, value) : 0,
     }));
   };
 
@@ -253,15 +253,11 @@ export function DeliveryFormDialog({
                         </span>
                       </div>
                       <div className="col-span-3 text-right">
-                        <Input
-                          type="number"
-                          step="any"
-                          min="0"
+                        <FormattedNumberInput
+                          allowDecimals
                           className="h-8 text-right font-medium text-xs"
                           value={itemQuantities[it.id] ?? 0}
-                          onChange={(e) =>
-                            handleQtyChange(it.id, e.target.value)
-                          }
+                          onChange={(val) => handleQtyChange(it.id, val)}
                         />
                       </div>
                     </div>

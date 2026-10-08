@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import {
   Table,
   TableBody,
@@ -169,12 +170,12 @@ export function BoqTemplateEditor({ items, onChange, errors }: BoqTemplateEditor
                       )}
                     </TableCell>
                     <TableCell className="p-2 align-top">
-                      <Input
-                        type="number"
-                        step="any"
+                      <FormattedNumberInput
+                        allowDecimals
+                        placeholder="0"
                         value={item.qty}
-                        onChange={(e) =>
-                          handleItemChange(index, "qty", e.target.value)
+                        onChange={(val) =>
+                          handleItemChange(index, "qty", val ?? 0)
                         }
                         className={cn(
                           "h-8 text-xs tabular-nums text-right",
@@ -186,12 +187,12 @@ export function BoqTemplateEditor({ items, onChange, errors }: BoqTemplateEditor
                       )}
                     </TableCell>
                     <TableCell className="p-2 align-top">
-                      <Input
-                        type="number"
-                        step="any"
-                        value={item.unitPrice || 0}
-                        onChange={(e) =>
-                          handleItemChange(index, "unitPrice", e.target.value)
+                      <FormattedNumberInput
+                        prefix="Rp "
+                        placeholder="0"
+                        value={item.unitPrice}
+                        onChange={(val) =>
+                          handleItemChange(index, "unitPrice", val ?? 0)
                         }
                         className={cn(
                           "h-8 text-xs tabular-nums text-right",

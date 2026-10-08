@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -592,25 +593,23 @@ export function PackageDetailDialog({
 
                       <div className="md:col-span-3 space-y-1">
                         <Label className="text-[11px]">Kuantitas Rencana</Label>
-                        <Input
-                          type="number"
-                          step="any"
-                          min="0.001"
+                        <FormattedNumberInput
+                          allowDecimals
+                          placeholder="1"
                           className="h-8 text-xs"
                           value={itemQtyPlanned}
-                          onChange={(e) => setItemQtyPlanned(e.target.value)}
+                          onChange={(val) => setItemQtyPlanned(val !== null ? String(val) : "")}
                         />
                       </div>
 
                       <div className="md:col-span-3 space-y-1">
                         <Label className="text-[11px]">Harga Satuan (Rp)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="any"
+                        <FormattedNumberInput
+                          prefix="Rp "
+                          placeholder="0"
                           className="h-8 text-xs"
                           value={itemUnitPrice}
-                          onChange={(e) => setItemUnitPrice(e.target.value)}
+                          onChange={(val) => setItemUnitPrice(val !== null ? String(val) : "0")}
                         />
                       </div>
 
@@ -931,14 +930,13 @@ export function PackageDetailDialog({
                         <Label htmlFor="paidAmount" className="text-xs">
                           Jumlah Dibayar (Rp)
                         </Label>
-                        <Input
+                        <FormattedNumberInput
                           id="paidAmount"
-                          type="number"
-                          min="0"
-                          step="any"
+                          prefix="Rp "
+                          placeholder="0"
                           className="h-9 text-xs font-mono"
                           value={paidAmount}
-                          onChange={(e) => setPaidAmount(e.target.value)}
+                          onChange={(val) => setPaidAmount(val !== null ? String(val) : "0")}
                         />
                       </div>
 

@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -221,15 +222,19 @@ export function ItemDialog({
 
           <div className="space-y-2">
             <Label htmlFor="standardPrice">Harga Standar (Rp)</Label>
-            <Input
-              id="standardPrice"
-              type="number"
-              step="any"
-              min={0}
-              placeholder="0"
-              className="tabular-nums"
-              disabled={isSubmitting}
-              {...register("standardPrice")}
+            <Controller
+              control={control}
+              name="standardPrice"
+              render={({ field }) => (
+                <FormattedNumberInput
+                  id="standardPrice"
+                  prefix="Rp "
+                  placeholder="0"
+                  disabled={isSubmitting}
+                  value={field.value}
+                  onChange={(val) => field.onChange(val ?? 0)}
+                />
+              )}
             />
             {errors.standardPrice && (
               <p className="text-xs text-destructive">{errors.standardPrice.message}</p>

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -680,12 +681,11 @@ export function EquipmentLogTable({
                 <Label className="text-xs font-semibold text-primary">
                   Volume Kerja <span className="text-rose-500">*</span>
                 </Label>
-                <Input
-                  type="number"
-                  min={0.01}
-                  step={0.01}
+                <FormattedNumberInput
+                  allowDecimals
+                  maxDecimals={2}
                   value={workVolume}
-                  onChange={(e) => setWorkVolume(e.target.value)}
+                  onChange={(val) => setWorkVolume(val !== null ? String(val) : "")}
                   placeholder="Contoh: 50"
                   className="h-8 text-xs font-bold text-foreground bg-background"
                 />
@@ -726,12 +726,11 @@ export function EquipmentLogTable({
 
               <div className="space-y-1">
                 <Label className="text-xs">BBM Solar (Liter)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
+                <FormattedNumberInput
+                  allowDecimals
+                  maxDecimals={2}
                   value={fuelLiters}
-                  onChange={(e) => setFuelLiters(e.target.value)}
+                  onChange={(val) => setFuelLiters(val !== null ? String(val) : "")}
                   placeholder="Opsional"
                   className="h-8 text-xs bg-background"
                 />
@@ -755,12 +754,11 @@ export function EquipmentLogTable({
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">HM Awal</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.1}
+                  <FormattedNumberInput
+                    allowDecimals
+                    maxDecimals={2}
                     value={hmStart}
-                    onChange={(e) => setHmStart(e.target.value)}
+                    onChange={(val) => setHmStart(val !== null ? String(val) : "")}
                     placeholder="0.0"
                     className="h-8 text-xs font-mono bg-background"
                   />
@@ -768,12 +766,11 @@ export function EquipmentLogTable({
 
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">HM Akhir</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.1}
+                  <FormattedNumberInput
+                    allowDecimals
+                    maxDecimals={2}
                     value={hmEnd}
-                    onChange={(e) => setHmEnd(e.target.value)}
+                    onChange={(val) => setHmEnd(val !== null ? String(val) : "")}
                     placeholder="0.0"
                     className="h-8 text-xs font-mono bg-background"
                   />

@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -736,12 +737,12 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
               <Label htmlFor="approvedAmount" className="text-xs font-medium">
                 Nominal Disetujui (Rp)
               </Label>
-              <Input
+              <FormattedNumberInput
                 id="approvedAmount"
-                type="number"
-                min="0"
+                prefix="Rp "
+                placeholder="0"
                 value={approvedAmount}
-                onChange={(e) => setApprovedAmount(e.target.value)}
+                onChange={(val) => setApprovedAmount(val ?? 0)}
                 disabled={isCompletedOrCancelled}
                 className="h-9 text-xs font-mono"
               />
@@ -1403,13 +1404,12 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
 
             <div className="space-y-1">
               <Label htmlFor="suppAmount">Nominal Tambahan (Rp) *</Label>
-              <Input
+              <FormattedNumberInput
                 id="suppAmount"
-                type="number"
-                min="1"
+                prefix="Rp "
                 placeholder="0"
                 value={suppAmount}
-                onChange={(e) => setSuppAmount(e.target.value)}
+                onChange={(val) => setSuppAmount(val !== null ? String(val) : "")}
                 className="h-8 text-xs font-mono"
               />
             </div>

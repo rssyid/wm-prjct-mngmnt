@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -549,15 +550,13 @@ export function WorkPackageProgressCard({
                   )}
                 </div>
                 <div className="flex gap-1.5">
-                  <Input
+                  <FormattedNumberInput
                     id={`vol-${workPackage.id}`}
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={volumeAchieved}
-                    onChange={(e) => handleVolumeChange(e.target.value)}
+                    allowDecimals
                     placeholder="Contoh: 250"
                     className="h-8 text-xs font-semibold"
+                    value={volumeAchieved}
+                    onChange={(val) => handleVolumeChange(val !== null ? String(val) : "")}
                   />
                   <div
                     title="Satuan mengikuti master paket kerja"
@@ -599,16 +598,14 @@ export function WorkPackageProgressCard({
                     </span>
                   )}
                 </div>
-                <Input
+                <FormattedNumberInput
                   id={`pct-${workPackage.id}`}
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={progressPct}
-                  onChange={(e) => setProgressPct(e.target.value)}
+                  allowDecimals
+                  suffix="%"
                   placeholder="0 - 100"
                   className="h-8 text-xs font-mono font-bold text-primary"
+                  value={progressPct}
+                  onChange={(val) => setProgressPct(val !== null ? String(val) : "")}
                 />
               </div>
             </div>
@@ -656,12 +653,11 @@ export function WorkPackageProgressCard({
                 <Label htmlFor={`water-${workPackage.id}`} className="text-xs">
                   Tinggi Muka Air (cm)
                 </Label>
-                <Input
+                <FormattedNumberInput
                   id={`water-${workPackage.id}`}
-                  type="number"
-                  step={1}
+                  allowDecimals
                   value={waterLevelCm}
-                  onChange={(e) => setWaterLevelCm(e.target.value)}
+                  onChange={(val) => setWaterLevelCm(val !== null ? String(val) : "")}
                   placeholder="Contoh: 45"
                   className="h-8 text-xs"
                 />
@@ -899,13 +895,11 @@ export function WorkPackageProgressCard({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Progres Kumulatif (%)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
+                <FormattedNumberInput
+                  allowDecimals
+                  suffix="%"
                   value={editProgressPct}
-                  onChange={(e) => setEditProgressPct(e.target.value)}
+                  onChange={(val) => setEditProgressPct(val !== null ? String(val) : "")}
                   className="h-8 text-xs font-mono font-semibold"
                 />
               </div>
@@ -925,12 +919,10 @@ export function WorkPackageProgressCard({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Volume Tercapai</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
+                <FormattedNumberInput
+                  allowDecimals
                   value={editVolumeAchieved}
-                  onChange={(e) => handleEditVolumeChange(e.target.value)}
+                  onChange={(val) => handleEditVolumeChange(val !== null ? String(val) : "")}
                   className="h-8 text-xs font-semibold"
                 />
               </div>
@@ -990,10 +982,10 @@ export function WorkPackageProgressCard({
 
               <div className="space-y-1">
                 <Label className="text-xs">Tinggi Air (cm)</Label>
-                <Input
-                  type="number"
+                <FormattedNumberInput
+                  allowDecimals
                   value={editWaterLevel}
-                  onChange={(e) => setEditWaterLevel(e.target.value)}
+                  onChange={(val) => setEditWaterLevel(val !== null ? String(val) : "")}
                   className="h-8 text-xs"
                 />
               </div>

@@ -34,7 +34,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 
 // Lazy-load MapPicker via next/dynamic dengan ssr: false
 const MapPicker = dynamic(() => import("@/components/projects/map-picker"), {
@@ -144,6 +145,7 @@ export default function NewProjectPage() {
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<ProjectInput>({
     resolver: zodResolver(projectInputSchema),
@@ -816,12 +818,18 @@ export default function NewProjectPage() {
                   <Label className="text-xs font-semibold">
                     Total Anggaran (Rp) <span className="text-rose-500">*</span>
                   </Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    {...register("totalBudgetAmount")}
-                    placeholder="0"
-                    className="tabular-nums text-right font-medium"
+                  <Controller
+                    control={control}
+                    name="totalBudgetAmount"
+                    render={({ field }) => (
+                      <FormattedNumberInput
+                        prefix="Rp "
+                        placeholder="0"
+                        value={field.value}
+                        onChange={(val) => field.onChange(val ?? 0)}
+                        className="tabular-nums text-right font-medium"
+                      />
+                    )}
                   />
                   {errors.totalBudgetAmount && (
                     <p className="text-[11px] text-rose-500">
@@ -832,12 +840,18 @@ export default function NewProjectPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Target Kuantitas</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    {...register("targetQuantity")}
-                    placeholder="Contoh: 1"
-                    className="tabular-nums text-right"
+                  <Controller
+                    control={control}
+                    name="targetQuantity"
+                    render={({ field }) => (
+                      <FormattedNumberInput
+                        allowDecimals
+                        placeholder="Contoh: 1"
+                        value={field.value}
+                        onChange={field.onChange}
+                        className="tabular-nums text-right"
+                      />
+                    )}
                   />
                 </div>
 

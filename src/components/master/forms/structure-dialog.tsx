@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -378,12 +379,18 @@ export function StructureVariantDialog({
                     />
                   </div>
                   <div className="col-span-2">
-                    <Input
-                      type="number"
-                      step="any"
-                      placeholder="Qty"
-                      className="h-8 text-xs tabular-nums"
-                      {...register(`defaultBoqItems.${index}.qty` as never)}
+                    <Controller
+                      name={`defaultBoqItems.${index}.qty` as never}
+                      control={control}
+                      render={({ field }) => (
+                        <FormattedNumberInput
+                          allowDecimals
+                          placeholder="Qty"
+                          className="h-8 text-xs tabular-nums"
+                          value={field.value}
+                          onChange={(val) => field.onChange(val ?? 0)}
+                        />
+                      )}
                     />
                   </div>
                   <div className="col-span-1 flex justify-center">
