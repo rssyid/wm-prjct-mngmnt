@@ -117,7 +117,7 @@ export function CompanyMultiSelectFilter({
   }, [selectedCompanyIds, isAllSelected, companies, placeholder]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -147,7 +147,7 @@ export function CompanyMultiSelectFilter({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-80 p-0 shadow-lg border-border"
+        className="w-[var(--radix-popover-trigger-width)] min-w-[280px] sm:min-w-[320px] max-w-[90vw] p-0 shadow-lg border-border"
         align="start"
       >
         <div className="p-2 border-b border-border space-y-2">

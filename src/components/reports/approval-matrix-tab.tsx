@@ -310,9 +310,9 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
         <CardContent className="p-3">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
             {/* Filter controls group */}
-            <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="flex flex-wrap items-center gap-2.5 flex-1">
               {/* Multi-select filter grouped by region */}
-              <div className="w-full sm:w-64">
+              <div className="w-full sm:w-[280px] lg:w-[300px]">
                 <CompanyMultiSelectFilter
                   companies={companies}
                   selectedCompanyIds={selectedCompanyIds}
@@ -323,7 +323,7 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
               </div>
 
               {/* Status Approval Select */}
-              <div className="w-full sm:w-44">
+              <div className="w-full sm:w-56 lg:w-60">
                 <Select
                   value={approvalStatusFilter}
                   onValueChange={setApprovalStatusFilter}
@@ -331,7 +331,7 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
                   <SelectTrigger className="h-9 text-xs border-input bg-background">
                     <SelectValue placeholder="Status Approval" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[240px]">
                     <SelectItem value="ALL">Semua Status Approval</SelectItem>
                     <SelectItem value="WAITING">Sedang Menunggu Paraf</SelectItem>
                     <SelectItem value="APPROVED">Tuntas Disetujui</SelectItem>
@@ -341,7 +341,7 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
               </div>
 
               {/* Search Box Live */}
-              <div className="relative w-full sm:w-60">
+              <div className="relative w-full sm:w-64 lg:w-72">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Cari proyek / No AR..."

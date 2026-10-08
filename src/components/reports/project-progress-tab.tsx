@@ -306,11 +306,11 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
       {/* Rapi Toolbar Filter & Action Bar */}
       <Card className="border-border shadow-xs bg-card">
         <CardContent className="p-3">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+          <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
             {/* Filter controls */}
-            <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="flex flex-wrap items-center gap-2.5 flex-1">
               {/* Multi-select filter grouped by region */}
-              <div className="w-full sm:w-64">
+              <div className="w-full sm:w-[280px] lg:w-[300px]">
                 <CompanyMultiSelectFilter
                   companies={companies}
                   selectedCompanyIds={selectedCompanyIds}
@@ -321,7 +321,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
               </div>
 
               {/* Status Indikator EWS */}
-              <div className="w-full sm:w-44">
+              <div className="w-full sm:w-56 lg:w-60">
                 <Select
                   value={indicatorFilter}
                   onValueChange={setIndicatorFilter}
@@ -329,7 +329,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                   <SelectTrigger className="h-9 text-xs border-input bg-background">
                     <SelectValue placeholder="Status Indikator EWS" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[240px]">
                     <SelectItem value="ALL">Semua Indikator EWS</SelectItem>
                     <SelectItem value="ON_TRACK">Sesuai Jadwal (On Track)</SelectItem>
                     <SelectItem value="AT_RISK">Beresiko (At Risk)</SelectItem>
@@ -340,7 +340,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
               </div>
 
               {/* Search Box Live */}
-              <div className="relative w-full sm:w-60">
+              <div className="relative w-full sm:w-64 lg:w-72">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Cari proyek / vendor / paket..."
@@ -368,7 +368,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                   variant="ghost"
                   size="sm"
                   onClick={resetFilters}
-                  className="h-9 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2"
+                  className="h-9 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2.5"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Reset
@@ -377,7 +377,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
             </div>
 
             {/* View Mode Toggle & Export Excel */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center justify-between xl:justify-end gap-2 shrink-0 pt-2 xl:pt-0 border-t xl:border-t-0 border-border/40">
               {/* Switch View Toggle */}
               <div className="inline-flex rounded-md border border-input p-0.5 bg-muted/40">
                 <Button

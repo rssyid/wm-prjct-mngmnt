@@ -206,7 +206,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
     <PopoverContent
       ref={ref}
       className={cn(
-        "w-[var(--radix-popover-trigger-width)] min-w-[8rem] max-w-[90vw]",
+        "w-[var(--radix-popover-trigger-width)] min-w-[12rem] max-w-[90vw]",
         className
       )}
       {...props}
