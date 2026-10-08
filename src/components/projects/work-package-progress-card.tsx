@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { toProxyUrl } from "@/lib/r2-url";
 import { PackageCategory } from "@prisma/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,14 +39,18 @@ import {
   AlertCircle,
   Calendar,
   Camera,
+  CheckCircle2,
   CloudRain,
   Edit,
   History,
   Lock,
+  Sparkles,
   Trash2,
+  Truck,
   Waves,
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
+import type { EquipmentLogRow } from "@/components/projects/equipment-log-table";
 
 export interface ProgressLogRow {
   id: string;
@@ -75,12 +79,18 @@ export interface WorkPackageData {
   volumeAchieved?: number | null;
 }
 
-interface WorkPackageProgressCardProps {
+export interface WorkPackageProgressCardProps {
   workPackage: WorkPackageData;
   projectId: string;
   currentWeek: number;
   isCompleted: boolean;
   logs: ProgressLogRow[];
+  projectDates?: {
+    constructionPlanStartDate?: string | Date | null;
+    targetStartDate?: string | Date | null;
+    createdAt?: string | Date;
+  };
+  equipmentLogs?: EquipmentLogRow[];
   onMutated?: () => void;
 }
 
@@ -90,6 +100,8 @@ export function WorkPackageProgressCard({
   currentWeek,
   isCompleted,
   logs,
+  projectDates,
+  equipmentLogs,
   onMutated,
 }: WorkPackageProgressCardProps) {
   const queryClient = useQueryClient();
@@ -101,22 +113,43 @@ export function WorkPackageProgressCard({
       .sort((a, b) => b.weekNo - a.weekNo);
   }, [logs, workPackage.id]);
 
-  // Cari apakah log untuk minggu berjalan sudah ada
-  const currentWeekLog = useMemo(() => {
-    return packageLogs.find((l) => l.weekNo === currentWeek);
-  }, [packageLogs, currentWeek]);
+  // Form state tanggal log (input utama pengguna)
+  const [logDate, setLogDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
 
-  // Form state input baru
-  const [selectedWeek, setSelectedWeek] = useState<number>(currentWeek);
+  // Hitung nomor minggu secara dinamis dari logDate yang dipilih
+  const computedWeekNo = useMemo(() => {
+    if (!logDate) return currentWeek;
+    const startDateRaw =
+      projectDates?.constructionPlanStartDate ??
+      projectDates?.targetStartDate ??
+      projectDates?.createdAt;
+
+    if (!startDateRaw) return currentWeek;
+
+    const startDate = new Date(startDateRaw);
+    const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const chosen = new Date(logDate);
+    const ref = new Date(chosen.getFullYear(), chosen.getMonth(), chosen.getDate());
+
+    const diffMs = ref.getTime() - start.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 1;
+    return Math.floor(diffDays / 7) + 1;
+  }, [logDate, projectDates, currentWeek]);
+
+  // Cek apakah log untuk minggu hasil kalkulasi tanggal tersebut sudah ada
+  const existingLogForComputedWeek = useMemo(() => {
+    return packageLogs.find((l) => l.weekNo === computedWeekNo);
+  }, [packageLogs, computedWeekNo]);
+
+  // Form state input progres
   const [progressPct, setProgressPct] = useState<string>(
-    currentWeekLog ? String(currentWeekLog.progressPct) : String(workPackage.progressPct || 0)
+    String(workPackage.progressPct || 0)
   );
   const [volumeAchieved, setVolumeAchieved] = useState<string>(
     workPackage.volumeAchieved ? String(workPackage.volumeAchieved) : ""
-  );
-  const [volumeUnit, setVolumeUnit] = useState<string>(workPackage.uom || "");
-  const [logDate, setLogDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
   );
   const [weatherCondition, setWeatherCondition] = useState<string>("Cerah");
   const [waterLevelCm, setWaterLevelCm] = useState<string>("");
@@ -124,11 +157,53 @@ export function WorkPackageProgressCard({
   const [photos, setPhotos] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Target volume & Burn-down stats (misal target 500m)
+  const targetQty = workPackage.targetQuantity;
+  const uomLabel = workPackage.uom || "unit";
+  const numVol = parseFloat(volumeAchieved) || 0;
+  const remainingVol = targetQty ? Math.max(0, Math.round((targetQty - numVol) * 100) / 100) : null;
+  const isTargetFinished = targetQty ? numVol >= targetQty : false;
+
+  // Auto-hitung persentase progres saat volume berubah jika targetQuantity tersedia
+  const handleVolumeChange = (val: string) => {
+    setVolumeAchieved(val);
+    const parsed = parseFloat(val);
+    if (!isNaN(parsed) && targetQty && targetQty > 0) {
+      const calc = Math.min(100, Math.max(0, Math.round((parsed / targetQty) * 1000) / 10));
+      setProgressPct(String(calc));
+    }
+  };
+
+  // Ringkasan Penggunaan Alat Berat untuk Paket Kerja ini
+  const packageEquipment = useMemo(() => {
+    if (!equipmentLogs || equipmentLogs.length === 0) return [];
+    return equipmentLogs.filter((el) => el.workPackageId === workPackage.id);
+  }, [equipmentLogs, workPackage.id]);
+
+  const equipmentStats = useMemo(() => {
+    if (!packageEquipment.length) return null;
+    const totalHmHours = packageEquipment.reduce((acc, el) => acc + (el.hmHours || 0), 0);
+    const totalFuel = packageEquipment.reduce((acc, el) => acc + (el.fuelLiters || 0), 0);
+    const totalWorkVolume = packageEquipment.reduce((acc, el) => acc + (el.workVolume || 0), 0);
+    const uniqueUnits = Array.from(new Set(packageEquipment.map((el) => el.unitCode)));
+    const productivity = totalHmHours > 0
+      ? Math.round(((workPackage.volumeAchieved || totalWorkVolume) / totalHmHours) * 10) / 10
+      : null;
+
+    return {
+      totalHmHours: Math.round(totalHmHours * 10) / 10,
+      totalFuel: Math.round(totalFuel * 10) / 10,
+      totalWorkVolume: Math.round(totalWorkVolume * 10) / 10,
+      uniqueUnits,
+      count: packageEquipment.length,
+      productivity,
+    };
+  }, [packageEquipment, workPackage.volumeAchieved]);
+
   // Edit dialog state
   const [editingLog, setEditingLog] = useState<ProgressLogRow | null>(null);
   const [editProgressPct, setEditProgressPct] = useState<string>("");
   const [editVolumeAchieved, setEditVolumeAchieved] = useState<string>("");
-  const [editVolumeUnit, setEditVolumeUnit] = useState<string>("");
   const [editLogDate, setEditLogDate] = useState<string>("");
   const [editWeather, setEditWeather] = useState<string>("Cerah");
   const [editWaterLevel, setEditWaterLevel] = useState<string>("");
@@ -139,11 +214,6 @@ export function WorkPackageProgressCard({
   // Delete dialog state
   const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
 
-  // Cek apakah minggu yang dipilih di form sudah ada log-nya
-  const isSelectedWeekExisting = useMemo(() => {
-    return packageLogs.some((l) => l.weekNo === selectedWeek);
-  }, [packageLogs, selectedWeek]);
-
   // Mutation: Simpan Log Baru
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -153,11 +223,11 @@ export function WorkPackageProgressCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workPackageId: workPackage.id,
-          weekNo: Number(selectedWeek),
+          weekNo: computedWeekNo,
           logDate: new Date(logDate).toISOString(),
           progressPct: Number(progressPct),
           volumeAchieved: volumeAchieved ? Number(volumeAchieved) : null,
-          volumeUnit: volumeUnit || null,
+          volumeUnit: workPackage.uom || null,
           workDescription: workDescription || null,
           weatherCondition: weatherCondition || null,
           waterLevelCm: waterLevelCm ? Number(waterLevelCm) : null,
@@ -199,7 +269,7 @@ export function WorkPackageProgressCard({
             logDate: editLogDate ? new Date(editLogDate).toISOString() : undefined,
             progressPct: Number(editProgressPct),
             volumeAchieved: editVolumeAchieved ? Number(editVolumeAchieved) : null,
-            volumeUnit: editVolumeUnit || null,
+            volumeUnit: workPackage.uom || null,
             workDescription: editDescription || null,
             weatherCondition: editWeather || null,
             waterLevelCm: editWaterLevel ? Number(editWaterLevel) : null,
@@ -256,7 +326,6 @@ export function WorkPackageProgressCard({
     setEditingLog(log);
     setEditProgressPct(String(log.progressPct));
     setEditVolumeAchieved(log.volumeAchieved ? String(log.volumeAchieved) : "");
-    setEditVolumeUnit(log.volumeUnit || workPackage.uom || "");
     setEditLogDate(
       log.logDate
         ? new Date(log.logDate).toISOString().split("T")[0]
@@ -267,6 +336,15 @@ export function WorkPackageProgressCard({
     setEditDescription(log.workDescription || "");
     setEditPhotos(Array.isArray(log.photos) ? log.photos : []);
     setEditError(null);
+  };
+
+  const handleEditVolumeChange = (val: string) => {
+    setEditVolumeAchieved(val);
+    const parsed = parseFloat(val);
+    if (!isNaN(parsed) && targetQty && targetQty > 0) {
+      const calc = Math.min(100, Math.max(0, Math.round((parsed / targetQty) * 1000) / 10));
+      setEditProgressPct(String(calc));
+    }
   };
 
   const todayStr = new Date().toISOString().split("T")[0];
@@ -322,6 +400,60 @@ export function WorkPackageProgressCard({
       </CardHeader>
 
       <CardContent className="p-5 space-y-6">
+        {/* Ringkasan Kontrol Alat Berat & Produktivitas (Khusus paket HEAVY_EQUIPMENT atau jika ada log alat terkait) */}
+        {(workPackage.category === PackageCategory.HEAVY_EQUIPMENT || packageEquipment.length > 0) && (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-semibold text-primary">
+              <div className="flex items-center gap-1.5">
+                <Truck className="h-4 w-4" />
+                <span>Kontrol Alat Berat & Produktivitas Paket</span>
+              </div>
+              {equipmentStats ? (
+                <Badge variant="outline" className="text-[10px] bg-background">
+                  {equipmentStats.count} Catatan Harian
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] bg-background text-muted-foreground">
+                  Belum Ada Log Alat
+                </Badge>
+              )}
+            </div>
+
+            {equipmentStats ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
+                <div className="bg-background/90 p-2.5 rounded-md border border-border/70">
+                  <div className="text-[10px] text-muted-foreground font-medium">Unit Alat</div>
+                  <div className="font-semibold text-foreground truncate" title={equipmentStats.uniqueUnits.join(", ")}>
+                    {equipmentStats.uniqueUnits.join(", ") || "-"}
+                  </div>
+                </div>
+                <div className="bg-background/90 p-2.5 rounded-md border border-border/70">
+                  <div className="text-[10px] text-muted-foreground font-medium">Total Jam Kerja (HM)</div>
+                  <div className="font-mono font-bold text-foreground">
+                    {equipmentStats.totalHmHours} jam
+                  </div>
+                </div>
+                <div className="bg-background/90 p-2.5 rounded-md border border-border/70">
+                  <div className="text-[10px] text-muted-foreground font-medium">Konsumsi Solar</div>
+                  <div className="font-mono font-bold text-foreground">
+                    {equipmentStats.totalFuel} Liter
+                  </div>
+                </div>
+                <div className="bg-background/90 p-2.5 rounded-md border border-border/70">
+                  <div className="text-[10px] text-muted-foreground font-medium">Produktivitas Alat</div>
+                  <div className="font-mono font-bold text-primary">
+                    {equipmentStats.productivity !== null ? `${equipmentStats.productivity} ${uomLabel}/jam` : "-"}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Pekerjaan ini dialokasikan untuk alat berat. Mandor/operator dapat mencatat jam operasional (HM) dan solar di sub-tab <strong>Log Alat Berat</strong> dengan menautkan ke paket ini.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Form Input Progres Mingguan */}
         {!isCompleted ? (
           <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-4">
@@ -332,11 +464,12 @@ export function WorkPackageProgressCard({
                   Input Log Progres Mingguan
                 </h4>
               </div>
-              {selectedWeek === currentWeek && (
-                <Badge className="bg-primary/10 text-primary border-primary/20 text-[11px] font-medium">
-                  Minggu Berjalan (Ke-{currentWeek})
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground">Minggu Target:</span>
+                <Badge className={cn("text-[11px] font-medium", computedWeekNo === currentWeek ? "bg-primary/10 text-primary border-primary/20" : "bg-muted text-muted-foreground")}>
+                  Minggu ke-{computedWeekNo} {computedWeekNo === currentWeek ? "(Berjalan)" : "(Dinamis)"}
                 </Badge>
-              )}
+              </div>
             </div>
 
             {formError && (
@@ -346,79 +479,30 @@ export function WorkPackageProgressCard({
               </div>
             )}
 
-            {isSelectedWeekExisting && (
-              <div className="rounded-md bg-amber-50 p-2.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 flex items-center gap-2 border border-amber-200 dark:border-amber-900">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>
-                  Log minggu ke-{selectedWeek} sudah pernah dicatat. Gunakan tombol{" "}
-                  <strong>Edit</strong> pada riwayat di bawah jika ingin mengoreksi.
-                </span>
+            {existingLogForComputedWeek && (
+              <div className="rounded-md bg-amber-50 p-2.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-amber-200 dark:border-amber-900">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span>
+                    Log progres untuk <strong>Minggu ke-{computedWeekNo}</strong> sudah pernah dicatat ({existingLogForComputedWeek.progressPct}% pada {formatDate(existingLogForComputedWeek.logDate)}).
+                  </span>
+                </div>
+                {computedWeekNo === currentWeek && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditModal(existingLogForComputedWeek)}
+                    className="h-7 text-xs bg-card hover:bg-muted shrink-0 self-end sm:self-auto"
+                  >
+                    <Edit className="h-3 w-3 mr-1" /> Koreksi Log
+                  </Button>
+                )}
               </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-              <div className="space-y-1">
-                <Label htmlFor={`week-${workPackage.id}`} className="text-xs">
-                  Nomor Minggu
-                </Label>
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    id={`week-${workPackage.id}`}
-                    type="number"
-                    min={1}
-                    value={selectedWeek}
-                    onChange={(e) => setSelectedWeek(Number(e.target.value))}
-                    className="h-8 text-xs font-mono"
-                  />
-                  {selectedWeek === currentWeek && (
-                    <Badge variant="outline" className="text-[10px] shrink-0">
-                      Aktif
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor={`pct-${workPackage.id}`} className="text-xs">
-                  Progres (%) <span className="text-rose-500">*</span>
-                </Label>
-                <Input
-                  id={`pct-${workPackage.id}`}
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={progressPct}
-                  onChange={(e) => setProgressPct(e.target.value)}
-                  placeholder="0 - 100"
-                  className="h-8 text-xs font-mono font-semibold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor={`vol-${workPackage.id}`} className="text-xs">
-                  Volume Tercapai
-                </Label>
-                <div className="flex gap-1.5">
-                  <Input
-                    id={`vol-${workPackage.id}`}
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={volumeAchieved}
-                    onChange={(e) => setVolumeAchieved(e.target.value)}
-                    placeholder="Volume"
-                    className="h-8 text-xs"
-                  />
-                  <Input
-                    value={volumeUnit}
-                    onChange={(e) => setVolumeUnit(e.target.value)}
-                    placeholder="Satuan"
-                    className="h-8 w-20 text-xs shrink-0"
-                  />
-                </div>
-              </div>
-
+              {/* 1. Tanggal Log (Input Pemicu Utama) */}
               <div className="space-y-1">
                 <Label htmlFor={`date-${workPackage.id}`} className="text-xs">
                   Tanggal Log <span className="text-rose-500">*</span>
@@ -429,10 +513,108 @@ export function WorkPackageProgressCard({
                   max={todayStr}
                   value={logDate}
                   onChange={(e) => setLogDate(e.target.value)}
-                  className="h-8 text-xs"
+                  className="h-8 text-xs font-medium"
+                />
+              </div>
+
+              {/* 2. Nomor Minggu (Otomatis Dihitung dari Tanggal) */}
+              <div className="space-y-1">
+                <Label className="text-xs">Nomor Minggu (Dinamis)</Label>
+                <div className="h-8 px-2.5 bg-muted/60 border border-border rounded-md flex items-center justify-between text-xs">
+                  <span className="font-mono font-bold text-foreground">
+                    Minggu ke-{computedWeekNo}
+                  </span>
+                  {computedWeekNo === currentWeek ? (
+                    <Badge variant="outline" className="text-[10px] h-5 bg-primary/10 text-primary border-primary/20 shrink-0">
+                      Aktif
+                    </Badge>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">
+                      Otomatis
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. Volume Tercapai (Dengan Satuan Terkunci Mengikuti Master / Paket) */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={`vol-${workPackage.id}`} className="text-xs">
+                    Volume Tercapai
+                  </Label>
+                  {targetQty && targetQty > 0 && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Target: {targetQty} {uomLabel}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  <Input
+                    id={`vol-${workPackage.id}`}
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={volumeAchieved}
+                    onChange={(e) => handleVolumeChange(e.target.value)}
+                    placeholder="Contoh: 250"
+                    className="h-8 text-xs font-semibold"
+                  />
+                  <div
+                    title="Satuan mengikuti master paket kerja"
+                    className="h-8 px-2.5 bg-muted border border-border rounded-md flex items-center justify-center text-xs font-semibold text-foreground shrink-0 min-w-14"
+                  >
+                    {uomLabel}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Progres Kumulatif (%) */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={`pct-${workPackage.id}`} className="text-xs">
+                    Progres Kumulatif (%) <span className="text-rose-500">*</span>
+                  </Label>
+                  {targetQty && targetQty > 0 && (
+                    <span className="text-[10px] text-primary flex items-center gap-0.5">
+                      <Sparkles className="h-3 w-3" /> Auto
+                    </span>
+                  )}
+                </div>
+                <Input
+                  id={`pct-${workPackage.id}`}
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={progressPct}
+                  onChange={(e) => setProgressPct(e.target.value)}
+                  placeholder="0 - 100"
+                  className="h-8 text-xs font-mono font-bold text-primary"
                 />
               </div>
             </div>
+
+            {/* Target Burn-Down Indicator (Misal kasus Tanggul 500m) */}
+            {targetQty && targetQty > 0 && (
+              <div className="rounded-md bg-muted/40 p-2.5 border border-border/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-xs">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <span>Realisasi Target:</span>
+                  <strong className="text-foreground">{numVol}</strong> / <strong>{targetQty} {uomLabel}</strong>
+                  <span className="text-[11px] font-mono text-primary">({Number(progressPct || 0)}%)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isTargetFinished ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[11px] flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Target Terpenuhi / Habis (100%)
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-[11px]">
+                      Sisa target: <strong className="text-foreground font-mono">{remainingVol} {uomLabel}</strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Cuaca & Muka Air */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -490,7 +672,7 @@ export function WorkPackageProgressCard({
                 values={photos}
                 onChange={setPhotos}
                 folder="progress"
-                disabled={createMutation.isPending || isSelectedWeekExisting}
+                disabled={createMutation.isPending || !!existingLogForComputedWeek}
               />
             </div>
 
@@ -498,10 +680,10 @@ export function WorkPackageProgressCard({
               <Button
                 size="sm"
                 onClick={() => createMutation.mutate()}
-                disabled={createMutation.isPending || isSelectedWeekExisting}
-                className="h-8 text-xs"
+                disabled={createMutation.isPending || !!existingLogForComputedWeek}
+                className="h-8 text-xs font-medium"
               >
-                {createMutation.isPending ? "Menyimpan..." : `Simpan Progres Minggu ke-${selectedWeek}`}
+                {createMutation.isPending ? "Menyimpan..." : `Simpan Progres Minggu ke-${computedWeekNo}`}
               </Button>
             </div>
           </div>
@@ -729,19 +911,28 @@ export function WorkPackageProgressCard({
                   min={0}
                   step={0.01}
                   value={editVolumeAchieved}
-                  onChange={(e) => setEditVolumeAchieved(e.target.value)}
-                  className="h-8 text-xs"
+                  onChange={(e) => handleEditVolumeChange(e.target.value)}
+                  className="h-8 text-xs font-semibold"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Satuan</Label>
-                <Input
-                  value={editVolumeUnit}
-                  onChange={(e) => setEditVolumeUnit(e.target.value)}
-                  className="h-8 text-xs"
-                />
+                <Label className="text-xs">Satuan (Master)</Label>
+                <div className="h-8 px-2.5 bg-muted border border-border rounded-md flex items-center justify-center text-xs font-semibold text-foreground">
+                  {uomLabel}
+                </div>
               </div>
             </div>
+
+            {targetQty && targetQty > 0 && (
+              <div className="rounded-md bg-muted/50 p-2 text-[11px] text-muted-foreground flex items-center justify-between border border-border/60">
+                <span>
+                  Target: <strong>{targetQty} {uomLabel}</strong> • Tercapai: <strong>{editVolumeAchieved || 0}</strong>
+                </span>
+                <span className="text-primary font-mono font-bold">
+                  {editProgressPct || 0}%
+                </span>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">

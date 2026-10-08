@@ -100,8 +100,16 @@ export function RealizationTab({
     data?: T;
   }
 
-  const rawProject = projectRes as ApiWrapper<{ currentWeek?: number; progressPct?: number }> | { currentWeek?: number; progressPct?: number } | undefined;
-  const projectData = (rawProject && "data" in rawProject && rawProject.data) ? rawProject.data : (rawProject as { currentWeek?: number; progressPct?: number } | undefined);
+  interface ProjectDetailData {
+    currentWeek?: number;
+    progressPct?: number;
+    constructionPlanStartDate?: string | null;
+    targetStartDate?: string | null;
+    createdAt?: string;
+  }
+
+  const rawProject = projectRes as ApiWrapper<ProjectDetailData> | ProjectDetailData | undefined;
+  const projectData = (rawProject && "data" in rawProject && rawProject.data) ? rawProject.data : (rawProject as ProjectDetailData | undefined);
 
   const currentWeek =
     projectData?.currentWeek ?? initialCurrentWeek ?? 1;
@@ -251,6 +259,12 @@ export function RealizationTab({
                   currentWeek={currentWeek}
                   isCompleted={isCompleted}
                   logs={progressLogs}
+                  projectDates={{
+                    constructionPlanStartDate: projectData?.constructionPlanStartDate,
+                    targetStartDate: projectData?.targetStartDate,
+                    createdAt: projectData?.createdAt,
+                  }}
+                  equipmentLogs={equipmentLogs}
                   onMutated={handleMutated}
                 />
               ))}

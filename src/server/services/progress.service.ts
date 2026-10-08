@@ -123,7 +123,7 @@ export interface CreateProgressLogInput {
   projectId: string;
   workPackageId: string;
   logDate?: Date | string;
-  weekNo: number;
+  weekNo?: number;
   progressPct: number;
   volumeAchieved?: number | null;
   volumeUnit?: string | null;
@@ -180,23 +180,6 @@ export async function createProgressLog(
       throw new AppError("Paket kerja tidak ditemukan pada proyek ini", 404);
     }
 
-    // Aturan B6: 1 log per paket per minggu
-    const existingLog = await tx.progressLog.findUnique({
-      where: {
-        workPackageId_weekNo: {
-          workPackageId: data.workPackageId,
-          weekNo: data.weekNo,
-        },
-      },
-    });
-
-    if (existingLog) {
-      throw new AppError(
-        `Log progres untuk paket kerja ini pada minggu ke-${data.weekNo} sudah pernah diisi.`,
-        409
-      );
-    }
-
     const logDate = data.logDate ? new Date(data.logDate) : new Date();
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
@@ -204,12 +187,32 @@ export async function createProgressLog(
       throw new AppError("Tanggal log tidak boleh di masa depan", 400);
     }
 
+    // Nomor minggu dinamis dari logDate bila tidak dikirim secara eksplisit
+    const weekNo = data.weekNo ?? getProjectCurrentWeek(project, logDate);
+
+    // Aturan B6: 1 log per paket per minggu
+    const existingLog = await tx.progressLog.findUnique({
+      where: {
+        workPackageId_weekNo: {
+          workPackageId: data.workPackageId,
+          weekNo,
+        },
+      },
+    });
+
+    if (existingLog) {
+      throw new AppError(
+        `Log progres untuk paket kerja ini pada minggu ke-${weekNo} sudah pernah diisi.`,
+        409
+      );
+    }
+
     const progressLog = await tx.progressLog.create({
       data: {
         projectId: data.projectId,
         workPackageId: data.workPackageId,
         logDate,
-        weekNo: data.weekNo,
+        weekNo,
         progressPct: data.progressPct,
         volumeAchieved: data.volumeAchieved || null,
         volumeUnit: data.volumeUnit || null,

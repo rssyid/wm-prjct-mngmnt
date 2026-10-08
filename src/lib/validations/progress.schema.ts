@@ -8,7 +8,7 @@ import { z } from "zod";
  */
 export const progressCreateSchema = z.object({
   workPackageId: z.string().min(1, "Paket kerja wajib dipilih"),
-  weekNo: z.coerce.number().int().min(1, "Nomor minggu minimal 1"),
+  weekNo: z.coerce.number().int().min(1, "Nomor minggu minimal 1").optional(),
   logDate: z.coerce
     .date()
     .refine((d) => d <= new Date(new Date().setHours(23, 59, 59, 999)), {
