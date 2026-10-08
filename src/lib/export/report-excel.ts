@@ -265,7 +265,7 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
       const snap = item.snapshots.find(
         (s) => normalizeApprovalRoleCode(s.role) === roleCode
       );
-      if (!snap || snap.status === "TIDAK_PERLU") return "-";
+      if (!snap || snap.status === "TIDAK_PERLU") return "NA";
       if (snap.status === "APPROVED") {
         return snap.approvedAt ? `✓ ${formatDate(snap.approvedAt)}` : "✓";
       }
@@ -275,7 +275,7 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
       if (snap.status === "WAITING") {
         return snap.waitingDays > 0 ? `Menunggu (${snap.waitingDays} hari)` : "Menunggu";
       }
-      return "-";
+      return "NA";
     };
 
     return {

@@ -154,8 +154,10 @@ export function ApprovalMatrixTab({ companies }: ApprovalMatrixTabProps) {
     );
     if (!snap || snap.status === "TIDAK_PERLU") {
       return (
-        <div className="text-center">
-          <span className="text-[11px] text-muted-foreground/30">-</span>
+        <div className="flex items-center justify-center text-center">
+          <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted/60 text-muted-foreground/60 dark:bg-muted/40 dark:text-muted-foreground/50 select-none">
+            NA
+          </span>
         </div>
       );
     }
