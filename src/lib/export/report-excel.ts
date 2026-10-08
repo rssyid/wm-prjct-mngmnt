@@ -263,10 +263,15 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
     const snapL2 = item.snapshots.find((s) => s.level === 2);
     const snapL3 = item.snapshots.find((s) => s.level === 3);
     const snapL4 = item.snapshots.find((s) => s.level === 4);
+    const snapL5 = item.snapshots.find((s) => s.level === 5);
+    const snapL6 = item.snapshots.find((s) => s.level === 6);
+    const snapL7 = item.snapshots.find((s) => s.level === 7);
+    const snapL8 = item.snapshots.find((s) => s.level === 8);
 
     const formatSnap = (s?: ApprovalMatrixSnapshotItem) => {
       if (!s) return "-";
-      let res = `[${s.status}] ${s.role}`;
+      if (s.status === "TIDAK_PERLU") return "Tidak Perlu";
+      let res = `[${s.role}] ${s.status === "APPROVED" ? "Disetujui" : s.status === "REJECTED" ? "Ditolak" : "Menunggu"}`;
       if (s.personName) res += ` - ${s.personName}`;
       if (s.approvedAt) res += ` (${formatDate(s.approvedAt)})`;
       else if (s.rejectedAt) res += ` (Ditolak: ${formatDate(s.rejectedAt)})`;
@@ -286,10 +291,14 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
       "Attempt Ke": item.currentAttempt,
       "Status Dokumen AR": item.afceStatus,
       "Tgl Submit Email": item.emailSubmittedDate ? formatDate(item.emailSubmittedDate) : "-",
-      "Level 1 (PIC/Estate)": formatSnap(snapL1),
-      "Level 2 (Area/Dept)": formatSnap(snapL2),
-      "Level 3 (GM/HO)": formatSnap(snapL3),
-      "Level 4 (Direktur/MCA)": formatSnap(snapL4),
+      "Level 1": formatSnap(snapL1),
+      "Level 2": formatSnap(snapL2),
+      "Level 3": formatSnap(snapL3),
+      "Level 4": formatSnap(snapL4),
+      "Level 5": formatSnap(snapL5),
+      "Level 6": formatSnap(snapL6),
+      "Level 7": formatSnap(snapL7),
+      "Level 8": formatSnap(snapL8),
       "Approver Tertahan": item.activeWaitingRole || "-",
       "Hari Menunggu": item.activeWaitingDays > 0 ? `${item.activeWaitingDays} Hari` : "-",
       "AR Tambahan (Qty)": item.supplementaryCount,
@@ -310,10 +319,14 @@ export async function exportApprovalMatrixExcel(items: ApprovalMatrixItem[]) {
     { wch: 12 }, // Attempt
     { wch: 18 }, // Status Dokumen
     { wch: 16 }, // Tgl Submit Email
-    { wch: 30 }, // Level 1
-    { wch: 30 }, // Level 2
-    { wch: 30 }, // Level 3
-    { wch: 30 }, // Level 4
+    { wch: 28 }, // Level 1
+    { wch: 28 }, // Level 2
+    { wch: 28 }, // Level 3
+    { wch: 28 }, // Level 4
+    { wch: 28 }, // Level 5
+    { wch: 28 }, // Level 6
+    { wch: 28 }, // Level 7
+    { wch: 28 }, // Level 8
     { wch: 22 }, // Approver Tertahan
     { wch: 14 }, // Hari Menunggu
     { wch: 16 }, // Supplementary

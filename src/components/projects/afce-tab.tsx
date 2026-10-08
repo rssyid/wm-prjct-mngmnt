@@ -61,7 +61,7 @@ interface ApprovalItemState {
   approvalLevel: number;
   role: string;
   personName: string;
-  status: ApprovalStatus;
+  status: ApprovalStatus | "TIDAK_PERLU";
   submittedAt?: string | null;
   approvedAt?: string | null;
   rejectedAt?: string | null;
@@ -119,10 +119,15 @@ interface AfceTabProps {
   onProjectUpdated?: () => void;
 }
 
-const DEFAULT_APPROVER_ROLES = [
-  "Estate Manager",
-  "Head of Water Management",
-  "Regional Controller",
+export const DEFAULT_APPROVER_ROLES = [
+  "EM (Estate Manager)",
+  "GEM (General Estate Manager)",
+  "RH (Regional Head)",
+  "HP (Head of Plantation)",
+  "MCA (Management Committee/Audit)",
+  "CFO (Chief Financial Officer)",
+  "COO (Chief Operating Officer)",
+  "Chairman (Chair)",
 ];
 
 export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabProps) {
@@ -220,23 +225,29 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
 
       if (currentAttemptSnapshots.length > 0) {
         setActiveApprovals(
-          currentAttemptSnapshots.map((a) => ({
-            id: a.id,
-            approvalLevel: a.approvalLevel,
-            role: a.role,
-            personName: a.personName || "",
-            status: a.status,
-            submittedAt: a.submittedAt,
-            approvedAt: a.approvedAt
-              ? new Date(a.approvedAt).toISOString().split("T")[0]
-              : "",
-            rejectedAt: a.rejectedAt,
-            notes: a.notes || "",
-            evidenceDocUrl: a.evidenceDocUrl || null,
-          }))
+          currentAttemptSnapshots.map((a) => {
+            const isNotRequired =
+              a.notes === "TIDAK_PERLU" || a.notes?.startsWith("[TIDAK_PERLU]");
+            return {
+              id: a.id,
+              approvalLevel: a.approvalLevel,
+              role: a.role,
+              personName: a.personName || "",
+              status: isNotRequired ? "TIDAK_PERLU" : a.status,
+              submittedAt: a.submittedAt,
+              approvedAt: a.approvedAt
+                ? new Date(a.approvedAt).toISOString().split("T")[0]
+                : "",
+              rejectedAt: a.rejectedAt,
+              notes: isNotRequired
+                ? a.notes?.replace(/^\[TIDAK_PERLU\]\s*/, "") || ""
+                : a.notes || "",
+              evidenceDocUrl: a.evidenceDocUrl || null,
+            };
+          })
         );
       } else {
-        // Inisialisasi default approvals bila kosong
+        // Inisialisasi default approvals 8 level bila kosong
         setActiveApprovals(
           DEFAULT_APPROVER_ROLES.map((role, idx) => ({
             approvalLevel: idx + 1,
@@ -248,7 +259,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
         );
       }
     } else {
-      // Default initial untuk dokumen baru
+      // Default initial 8 level untuk dokumen baru
       setActiveApprovals(
         DEFAULT_APPROVER_ROLES.map((role, idx) => ({
           approvalLevel: idx + 1,
@@ -260,6 +271,56 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
       );
     }
   }, [afce]);
+
+  const applyPresetSap = (
+    preset: "budget-low" | "budget-high" | "nonbudget-low" | "nonbudget-high"
+  ) => {
+    if (preset === "budget-low") {
+      setActiveApprovals([
+        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "GEM (General Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: "TIDAK_PERLU", notes: "" },
+        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: "TIDAK_PERLU", notes: "" },
+        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: "TIDAK_PERLU", notes: "" },
+      ]);
+    } else if (preset === "budget-high") {
+      setActiveApprovals([
+        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "HP (Head of Plantation)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: "TIDAK_PERLU", notes: "" },
+      ]);
+    } else if (preset === "nonbudget-low") {
+      setActiveApprovals([
+        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "GEM (General Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: "TIDAK_PERLU", notes: "" },
+      ]);
+    } else if (preset === "nonbudget-high") {
+      setActiveApprovals([
+        { approvalLevel: 1, role: "EM (Estate Manager)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 2, role: "RH (Regional Head)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 3, role: "HP (Head of Plantation)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 4, role: "MCA (Management Committee/Audit)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 5, role: "CFO (Chief Financial Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 6, role: "COO (Chief Operating Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 7, role: "CEO (Chief Executive Officer)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+        { approvalLevel: 8, role: "Chairman (Chair)", personName: "", status: ApprovalStatus.WAITING, notes: "" },
+      ]);
+    }
+  };
 
   // Handler tambah baris approver
   const handleAddApprover = () => {
@@ -335,13 +396,20 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
         );
       }
 
-      // Validasi urutan paraf (B2)
+      // Validasi urutan paraf (B2) - lewati level TIDAK_PERLU
       for (let i = 0; i < activeApprovals.length; i++) {
-        if (activeApprovals[i].status === ApprovalStatus.APPROVED) {
+        const cur = activeApprovals[i];
+        if (cur.status === "TIDAK_PERLU") continue;
+
+        if (cur.status === ApprovalStatus.APPROVED) {
           for (let j = 0; j < i; j++) {
-            if (activeApprovals[j].status !== ApprovalStatus.APPROVED) {
+            const prev = activeApprovals[j];
+            if (
+              prev.status !== ApprovalStatus.APPROVED &&
+              prev.status !== "TIDAK_PERLU"
+            ) {
               throw new Error(
-                `Approval harus berurutan: Level ${activeApprovals[i].approvalLevel} tidak dapat diset Approved sebelum Level ${activeApprovals[j].approvalLevel} Approved.`
+                `Approval harus berurutan: Level ${cur.approvalLevel} tidak dapat diset Approved sebelum Level ${prev.approvalLevel} Approved.`
               );
             }
           }
@@ -363,18 +431,25 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
         mcaApprovalDate: mcaApprovalDate
           ? new Date(mcaApprovalDate).toISOString()
           : null,
-        approvals: activeApprovals.map((a) => ({
-          approvalLevel: a.approvalLevel,
-          role: a.role.trim(),
-          personName: a.personName.trim() || null,
-          status: a.status,
-          approvedAt:
-            a.status === ApprovalStatus.APPROVED && a.approvedAt
-              ? new Date(a.approvedAt).toISOString()
-              : null,
-          notes: a.notes ? a.notes.trim() : null,
-          evidenceDocUrl: a.evidenceDocUrl || null,
-        })),
+        approvals: activeApprovals.map((a) => {
+          const isNotRequired = a.status === "TIDAK_PERLU";
+          return {
+            approvalLevel: a.approvalLevel,
+            role: a.role.trim(),
+            personName: a.personName.trim() || null,
+            status: isNotRequired ? ApprovalStatus.APPROVED : a.status,
+            approvedAt:
+              a.status === ApprovalStatus.APPROVED && a.approvedAt
+                ? new Date(a.approvedAt).toISOString()
+                : isNotRequired
+                ? new Date().toISOString()
+                : null,
+            notes: isNotRequired
+              ? a.notes ? `[TIDAK_PERLU] ${a.notes.trim()}` : "TIDAK_PERLU"
+              : a.notes ? a.notes.trim() : null,
+            evidenceDocUrl: a.evidenceDocUrl || null,
+          };
+        }),
       };
 
       const res = await fetch(`/api/projects/${projectId}/afce`, {
@@ -815,41 +890,106 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
 
       {/* Card 2: Jenjang Persetujuan Bertingkat (Active Attempt) */}
       <Card className="border-border shadow-xs">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" />
-              Jenjang Persetujuan (Attempt #{currentAttemptNo})
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Aturan B2: Persetujuan harus berurutan. Level N hanya dapat diset Approved jika level sebelumnya telah Approved.
-            </CardDescription>
+        <CardHeader className="pb-3 space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="space-y-1">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                Jenjang Persetujuan (Attempt #{currentAttemptNo})
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Standar 8 Level (EM s/d Chairman). Level yang tidak dibutuhkan untuk proyek tertentu dapat di-set &ldquo;Tidak Perlu&rdquo;.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddApprover}
+                disabled={isCompletedOrCancelled}
+                className="text-xs h-8"
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                Tambah Level
+              </Button>
+            </div>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddApprover}
-            disabled={isCompletedOrCancelled}
-            className="text-xs h-8"
-          >
-            <Plus className="mr-1 h-3.5 w-3.5" />
-            Tambah Approver
-          </Button>
+
+          {/* Preset Buttons Matriks SAP (Catatan SAP) */}
+          {!isCompletedOrCancelled && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/50">
+              <span className="text-[11px] text-muted-foreground font-medium mr-1">
+                Preset SAP:
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => applyPresetSap("budget-low")}
+                className="h-6 text-[10px] px-2 bg-muted/60 hover:bg-muted"
+                title="Budget < 500Jt: EM, GEM, RH, MCA, CFO (5 level)"
+              >
+                Budget &lt; 500Jt (5 Lvl)
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => applyPresetSap("budget-high")}
+                className="h-6 text-[10px] px-2 bg-muted/60 hover:bg-muted"
+                title="Budget > 500Jt: EM, RH, HP, MCA, CFO, COO, CEO (7 level)"
+              >
+                Budget &gt; 500Jt (7 Lvl)
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => applyPresetSap("nonbudget-low")}
+                className="h-6 text-[10px] px-2 bg-muted/60 hover:bg-muted"
+                title="Non Budget < 500Jt: EM, GEM, RH, MCA, CFO, COO, CEO (7 level)"
+              >
+                Non Budget &lt; 500Jt (7 Lvl)
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => applyPresetSap("nonbudget-high")}
+                className="h-6 text-[10px] px-2 bg-muted/60 hover:bg-muted"
+                title="Non Budget > 500Jt: EM, RH, HP, MCA, CFO, COO, CEO, Chair (8 level)"
+              >
+                Non Budget &gt; 500Jt (8 Lvl)
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-3">
           {activeApprovals.length === 0 ? (
             <div className="p-6 text-center text-xs text-muted-foreground border rounded-lg">
-              Belum ada approver terdaftar. Klik tombol Tambah Approver di atas.
+              Belum ada approver terdaftar. Klik tombol Tambah Level di atas atau pilih preset SAP.
             </div>
           ) : (
             <div className="space-y-2.5">
               {activeApprovals.map((item, index) => {
-                const statusCfg = APPROVAL_STATUS_CONFIG[item.status];
+                const isNotReq = item.status === "TIDAK_PERLU";
+                const statusCfg =
+                  item.status === "TIDAK_PERLU"
+                    ? {
+                        label: "Tidak Perlu",
+                        badgeClass:
+                          "bg-muted/40 text-muted-foreground border-dashed border-border",
+                      }
+                    : APPROVAL_STATUS_CONFIG[item.status as ApprovalStatus];
+
                 return (
                   <div
                     key={index}
-                    className="p-3.5 rounded-lg border border-border bg-card/60 space-y-3"
+                    className={cn(
+                      "p-3.5 rounded-lg border border-border bg-card/60 space-y-3 transition-opacity",
+                      isNotReq && "opacity-75 bg-muted/20"
+                    )}
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-2">
                       <div className="flex items-center gap-2">
@@ -889,22 +1029,22 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                             handleUpdateApprover(index, "role", e.target.value)
                           }
                           disabled={isCompletedOrCancelled}
-                          placeholder="Contoh: Estate Manager"
-                          className="h-8 text-xs"
+                          placeholder="Contoh: EM (Estate Manager)"
+                          className="h-8 text-xs font-medium"
                         />
                       </div>
 
                       <div className="space-y-1">
                         <Label className="text-[11px] text-muted-foreground">
-                          Nama Petugas Paraf (Aturan B1)
+                          Nama Pemaraf (Opsional)
                         </Label>
                         <Input
                           value={item.personName}
                           onChange={(e) =>
                             handleUpdateApprover(index, "personName", e.target.value)
                           }
-                          disabled={isCompletedOrCancelled}
-                          placeholder="Nama approver (paraf manual)"
+                          disabled={isCompletedOrCancelled || isNotReq}
+                          placeholder={isNotReq ? "Tidak Perlu" : "Nama pemaraf (opsional)"}
                           className="h-8 text-xs"
                         />
                       </div>
@@ -919,7 +1059,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                           onChange={(e) =>
                             handleUpdateApprover(index, "approvedAt", e.target.value)
                           }
-                          disabled={isCompletedOrCancelled}
+                          disabled={isCompletedOrCancelled || isNotReq}
                           className="h-8 text-xs"
                         />
                       </div>
@@ -931,7 +1071,11 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                         <Select
                           value={item.status}
                           onValueChange={(val) =>
-                            handleUpdateApprover(index, "status", val as ApprovalStatus)
+                            handleUpdateApprover(
+                              index,
+                              "status",
+                              val as ApprovalStatus | "TIDAK_PERLU"
+                            )
                           }
                           disabled={isCompletedOrCancelled}
                         >
@@ -942,6 +1086,7 @@ export function AfceTab({ projectId, projectStatus, onProjectUpdated }: AfceTabP
                             <SelectItem value="WAITING">Menunggu Paraf (WAITING)</SelectItem>
                             <SelectItem value="APPROVED">Diparaf (APPROVED)</SelectItem>
                             <SelectItem value="REJECTED">Ditolak (REJECTED)</SelectItem>
+                            <SelectItem value="TIDAK_PERLU">Tidak Perlu (N/A)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

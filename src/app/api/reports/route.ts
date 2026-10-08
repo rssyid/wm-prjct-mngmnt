@@ -384,8 +384,13 @@ export async function GET(request: NextRequest) {
           (a) => a.attemptNo === currentAttempt
         );
 
-        // Cari snapshot yang sedang WAITING pertama kali (urutan level)
-        const waitingSnap = currentSnapshots.find((s) => s.status === "WAITING");
+        // Cari snapshot yang sedang WAITING pertama kali (abaikan level TIDAK_PERLU)
+        const waitingSnap = currentSnapshots.find(
+          (s) =>
+            s.status === "WAITING" &&
+            s.notes !== "TIDAK_PERLU" &&
+            !s.notes?.startsWith("[TIDAK_PERLU]")
+        );
         let activeWaitingDays = 0;
         if (waitingSnap && waitingSnap.submittedAt) {
           const subDate = new Date(waitingSnap.submittedAt);
@@ -399,8 +404,11 @@ export async function GET(request: NextRequest) {
         const hasRejection = allApprovals.some((a) => a.status === "REJECTED");
 
         const snapshotsData = currentSnapshots.map((s) => {
+          const isNotRequired =
+            s.notes === "TIDAK_PERLU" || s.notes?.startsWith("[TIDAK_PERLU]");
+
           let waitDays = 0;
-          if (s.status === "WAITING" && s.submittedAt) {
+          if (s.status === "WAITING" && s.submittedAt && !isNotRequired) {
             const sub = new Date(s.submittedAt);
             sub.setHours(0, 0, 0, 0);
             waitDays = Math.max(
@@ -412,7 +420,7 @@ export async function GET(request: NextRequest) {
             level: s.approvalLevel,
             role: s.role,
             personName: s.personName,
-            status: s.status,
+            status: isNotRequired ? "TIDAK_PERLU" : s.status,
             submittedAt: s.submittedAt ? s.submittedAt.toISOString() : null,
             approvedAt: s.approvedAt ? s.approvedAt.toISOString() : null,
             rejectedAt: s.rejectedAt ? s.rejectedAt.toISOString() : null,

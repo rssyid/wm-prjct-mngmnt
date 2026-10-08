@@ -58,6 +58,7 @@ import {
   RotateCcw,
   Search,
   TrendingUp,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -110,7 +111,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
     setExpandedProjects(new Set());
   };
 
-  const fetchData = async () => {
+  const fetchData = async (searchVal = search) => {
     try {
       setLoading(true);
       setError(null);
@@ -123,8 +124,8 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
       if (indicatorFilter !== "ALL") {
         params.set("statusIndicator", indicatorFilter);
       }
-      if (search.trim()) {
-        params.set("search", search.trim());
+      if (searchVal.trim()) {
+        params.set("search", searchVal.trim());
       }
 
       const res = await fetch(`/api/reports?${params.toString()}`);
@@ -153,14 +154,12 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
   };
 
   useEffect(() => {
-    fetchData();
+    const timer = setTimeout(() => {
+      fetchData(search);
+    }, 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCompanyIds, indicatorFilter]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchData();
-  };
+  }, [selectedCompanyIds, indicatorFilter, search]);
 
   const resetFilters = () => {
     setSelectedCompanyIds([]);
@@ -304,12 +303,12 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
         </Card>
       </div>
 
-      {/* Filter Bar & Export */}
-      <Card className="border-border shadow-xs">
-        <CardContent className="p-4 space-y-4">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      {/* Rapi Toolbar Filter & Action Bar */}
+      <Card className="border-border shadow-xs bg-card">
+        <CardContent className="p-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
             {/* Filter controls */}
-            <div className="flex flex-wrap items-center gap-2.5 flex-1">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
               {/* Multi-select filter grouped by region */}
               <div className="w-full sm:w-64">
                 <CompanyMultiSelectFilter
@@ -317,16 +316,17 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                   selectedCompanyIds={selectedCompanyIds}
                   onChange={setSelectedCompanyIds}
                   placeholder="Filter Perusahaan (Group Region)"
+                  className="h-9 text-xs"
                 />
               </div>
 
               {/* Status Indikator EWS */}
-              <div className="w-full sm:w-48">
+              <div className="w-full sm:w-44">
                 <Select
                   value={indicatorFilter}
                   onValueChange={setIndicatorFilter}
                 >
-                  <SelectTrigger className="h-9 text-xs">
+                  <SelectTrigger className="h-9 text-xs border-input bg-background">
                     <SelectValue placeholder="Status Indikator EWS" />
                   </SelectTrigger>
                   <SelectContent>
@@ -339,37 +339,39 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                 </Select>
               </div>
 
-              {/* Search Form */}
-              <form
-                onSubmit={handleSearchSubmit}
-                className="flex items-center gap-1.5 w-full sm:w-56"
-              >
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Cari proyek / vendor / paket..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="h-9 pl-8 text-xs"
-                  />
-                </div>
-                <Button type="submit" variant="secondary" size="sm" className="h-9 text-xs px-2.5">
-                  Cari
-                </Button>
-              </form>
+              {/* Search Box Live */}
+              <div className="relative w-full sm:w-60">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Cari proyek / vendor / paket..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-9 pl-8 pr-7 text-xs border-input bg-background"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+                    title="Hapus pencarian"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
 
               {/* Reset filter button */}
               {(selectedCompanyIds.length > 0 ||
                 indicatorFilter !== "ALL" ||
-                search) && (
+                search.trim().length > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={resetFilters}
-                  className="h-9 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  className="h-9 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
-                  Reset Filter
+                  Reset
                 </Button>
               )}
             </div>
@@ -475,7 +477,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
             <div className="p-8 text-center text-rose-500 space-y-2">
               <AlertTriangle className="h-8 w-8 mx-auto" />
               <p className="text-sm">{error}</p>
-              <Button variant="outline" size="sm" onClick={fetchData}>
+              <Button variant="outline" size="sm" onClick={() => fetchData()}>
                 Coba Lagi
               </Button>
             </div>

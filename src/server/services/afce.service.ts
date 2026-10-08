@@ -77,16 +77,29 @@ export async function upsertAfceDocument(
     throw new AppError("Proyek telah dibatalkan dan tidak dapat diubah", 409);
   }
 
-  // Validasi Aturan B2: Approval harus berurutan ketat
+  // Validasi Aturan B2: Approval harus berurutan ketat (melewati level TIDAK_PERLU)
   const sortedApprovals = [...input.approvals].sort(
     (a, b) => a.approvalLevel - b.approvalLevel
   );
 
   for (let i = 0; i < sortedApprovals.length; i++) {
     const current = sortedApprovals[i];
+    const isCurrentNotRequired =
+      current.notes === "TIDAK_PERLU" ||
+      current.notes?.startsWith("[TIDAK_PERLU]");
+
+    if (isCurrentNotRequired) {
+      continue;
+    }
+
     if (current.status === "APPROVED") {
       for (let j = 0; j < i; j++) {
-        if (sortedApprovals[j].status !== "APPROVED") {
+        const prev = sortedApprovals[j];
+        const isPrevNotRequired =
+          prev.notes === "TIDAK_PERLU" ||
+          prev.notes?.startsWith("[TIDAK_PERLU]");
+
+        if (!isPrevNotRequired && prev.status !== "APPROVED") {
           throw new AppError("Approval harus berurutan", 400);
         }
       }
@@ -97,7 +110,14 @@ export async function upsertAfceDocument(
   let targetAfceStatus: AfceStatus = AfceStatus.PENDING;
   if (sortedApprovals.length > 0) {
     const hasRejected = sortedApprovals.some((a) => a.status === "REJECTED");
-    const allApproved = sortedApprovals.every((a) => a.status === "APPROVED");
+    const requiredApprovals = sortedApprovals.filter(
+      (a) =>
+        a.notes !== "TIDAK_PERLU" &&
+        !a.notes?.startsWith("[TIDAK_PERLU]")
+    );
+    const allApproved =
+      requiredApprovals.length > 0 &&
+      requiredApprovals.every((a) => a.status === "APPROVED");
 
     if (hasRejected) {
       targetAfceStatus = AfceStatus.REJECTED;
