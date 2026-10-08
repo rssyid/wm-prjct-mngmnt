@@ -187,10 +187,17 @@ export default function NewProjectPage() {
         body: JSON.stringify(values),
       });
 
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
 
       if (!res.ok || !result.success) {
-        throw new Error(result.error || "Gagal menyimpan proyek baru");
+        let msg = result.error || `Gagal menyimpan proyek baru (HTTP ${res.status})`;
+        if (result.details && typeof result.details === "object") {
+          const detailMsgs = Object.entries(result.details)
+            .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(", ") : errs}`)
+            .join("; ");
+          if (detailMsgs) msg += ` (${detailMsgs})`;
+        }
+        throw new Error(msg);
       }
 
       // Berhasil dibuat -> redirect ke halaman detail proyek
@@ -240,7 +247,18 @@ export default function NewProjectPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={handleSubmit(onSubmit, (formErrors) => {
+            console.error("Form validation errors:", formErrors);
+            const firstError = Object.values(formErrors)[0]?.message;
+            setErrorMessage(
+              firstError
+                ? `Validasi formulir belum lengkap: ${firstError}`
+                : "Mohon lengkapi seluruh kolom wajib yang bertanda bintang (*)"
+            );
+          })}
+          className="space-y-6"
+        >
           {/* Bagian 1: Identitas & Klasifikasi */}
           <Card className="border-border shadow-xs">
             <CardHeader className="pb-4">
