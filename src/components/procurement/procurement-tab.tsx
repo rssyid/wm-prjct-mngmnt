@@ -37,6 +37,8 @@ interface WorkPackageRow {
   vendorName?: string | null;
   picName?: string | null;
   weightPct: number;
+  targetQuantity?: number | null;
+  uom?: string | null;
   status: PackageStatus;
   paymentStatus: PaymentStatus;
   noPrUspk?: string | null;
@@ -152,10 +154,15 @@ export function ProcurementTab({
               <span className="font-semibold text-foreground">
                 {pkg.packageName}
               </span>
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+              <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
                 <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
                   {pkg.category}
                 </Badge>
+                {pkg.targetQuantity ? (
+                  <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-mono text-primary border-primary/30">
+                    Target: {pkg.targetQuantity} {pkg.uom || ""}
+                  </Badge>
+                ) : null}
                 {pkg.vendor?.name || pkg.vendorName ? (
                   <span>· {pkg.vendor?.name || pkg.vendorName}</span>
                 ) : null}

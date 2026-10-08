@@ -42,6 +42,9 @@ export async function listProjectPackages(projectId: string) {
       deletedAt: null,
     },
     include: {
+      project: {
+        select: { id: true, targetQuantity: true, uom: true },
+      },
       vendor: {
         select: { id: true, name: true, contactPerson: true, phone: true },
       },
@@ -104,8 +107,25 @@ export async function listProjectPackages(projectId: string) {
         pkg.status !== PackageStatus.DELIVERED &&
         pkg.status !== PackageStatus.COMPLETED);
 
+    const effectiveTargetQty =
+      pkg.targetQuantity !== null && pkg.targetQuantity !== undefined
+        ? Number(pkg.targetQuantity)
+        : totalPlannedQty > 0
+        ? totalPlannedQty
+        : pkg.project?.targetQuantity !== null && pkg.project?.targetQuantity !== undefined
+        ? Number(pkg.project.targetQuantity)
+        : null;
+
+    const effectiveUom =
+      pkg.uom ||
+      pkg.items.find((i) => i.item?.uom?.code)?.item?.uom?.code ||
+      pkg.project?.uom ||
+      null;
+
     return {
       ...pkg,
+      targetQuantity: effectiveTargetQty,
+      uom: effectiveUom,
       totalPlannedQty,
       totalReceivedQty,
       deliveryDelayDays,
@@ -125,6 +145,9 @@ export async function getPackageById(projectId: string, packageId: string) {
       deletedAt: null,
     },
     include: {
+      project: {
+        select: { id: true, targetQuantity: true, uom: true },
+      },
       vendor: {
         select: { id: true, name: true, contactPerson: true, phone: true },
       },
@@ -184,8 +207,25 @@ export async function getPackageById(projectId: string, packageId: string) {
     pkg.estDeliveryDate
   );
 
+  const effectiveTargetQty =
+    pkg.targetQuantity !== null && pkg.targetQuantity !== undefined
+      ? Number(pkg.targetQuantity)
+      : totalPlannedQty > 0
+      ? totalPlannedQty
+      : pkg.project?.targetQuantity !== null && pkg.project?.targetQuantity !== undefined
+      ? Number(pkg.project.targetQuantity)
+      : null;
+
+  const effectiveUom =
+    pkg.uom ||
+    pkg.items.find((i) => i.item?.uom?.code)?.item?.uom?.code ||
+    pkg.project?.uom ||
+    null;
+
   return {
     ...pkg,
+    targetQuantity: effectiveTargetQty,
+    uom: effectiveUom,
     totalPlannedQty,
     totalReceivedQty,
     deliveryDelayDays,
@@ -213,6 +253,8 @@ export async function createPackage(
         id: true,
         status: true,
         deletedAt: true,
+        targetQuantity: true,
+        uom: true,
         afceDocument: { select: { status: true } },
       },
     });
@@ -276,6 +318,25 @@ export async function createPackage(
       }
     }
 
+    // Target quantity & UOM fallback
+    const sumPlannedQty =
+      input.items && input.items.length > 0
+        ? input.items.reduce((acc, it) => acc + (Number(it.qtyPlanned) || 0), 0)
+        : 0;
+
+    const resolvedTargetQty =
+      input.targetQuantity !== null && input.targetQuantity !== undefined
+        ? input.targetQuantity
+        : sumPlannedQty > 0
+        ? sumPlannedQty
+        : project.targetQuantity !== null && project.targetQuantity !== undefined
+        ? Number(project.targetQuantity)
+        : null;
+
+    const resolvedUom =
+      input.uom ||
+      (project.uom ?? null);
+
     // 6. Buat WorkPackage beserta line items
     const created = await tx.workPackage.create({
       data: {
@@ -286,8 +347,8 @@ export async function createPackage(
         vendorName: input.vendorName || null,
         picName: input.picName || null,
         weightPct: input.weightPct || 0,
-        targetQuantity: input.targetQuantity || null,
-        uom: input.uom || null,
+        targetQuantity: resolvedTargetQty,
+        uom: resolvedUom,
         noPrUspk: input.noPrUspk || null,
         prUspkDate: input.prUspkDate || null,
         noPoSpk: input.noPoSpk || null,

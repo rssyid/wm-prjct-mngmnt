@@ -62,6 +62,8 @@ export interface WorkPackageOption {
   targetQuantity?: number | null;
   uom?: string | null;
   volumeAchieved?: number | null;
+  totalPlannedQty?: number | null;
+  items?: Array<{ item?: { uom?: { code?: string } } }>;
 }
 
 interface EquipmentLogTableProps {
@@ -127,8 +129,9 @@ export function EquipmentLogTable({
     setSelectedWpId(wpId);
     if (wpId !== "none") {
       const wp = workPackages.find((w) => w.id === wpId);
-      if (wp?.uom) {
-        setVolumeUnit(wp.uom);
+      const wpUom = wp?.uom || wp?.items?.[0]?.item?.uom?.code;
+      if (wpUom) {
+        setVolumeUnit(wpUom);
       }
     }
   };
@@ -136,16 +139,25 @@ export function EquipmentLogTable({
   // Statistik Target Rencana vs Akumulasi Realisasi untuk paket terpilih
   const wpStats = useMemo(() => {
     if (!selectedWp) return null;
-    const target = selectedWp.targetQuantity || 0;
+    const target =
+      selectedWp.targetQuantity !== null && selectedWp.targetQuantity !== undefined
+        ? Number(selectedWp.targetQuantity)
+        : selectedWp.totalPlannedQty || 0;
     const currentAchieved = selectedWp.volumeAchieved || 0;
     const remaining = target > 0 ? Math.max(0, Math.round((target - currentAchieved) * 100) / 100) : null;
     const inputVol = parseFloat(workVolume) || 0;
     const projectedAchieved = Math.round((currentAchieved + inputVol) * 100) / 100;
     const projectedRemaining = target > 0 ? Math.max(0, Math.round((target - projectedAchieved) * 100) / 100) : null;
 
+    const uom =
+      selectedWp.uom ||
+      selectedWp.items?.[0]?.item?.uom?.code ||
+      volumeUnit ||
+      "unit";
+
     return {
       target,
-      uom: selectedWp.uom || volumeUnit || "unit",
+      uom,
       currentAchieved,
       remaining,
       projectedAchieved,
@@ -514,11 +526,19 @@ export function EquipmentLogTable({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">-- Tanpa Paket Spesifik (Umum) --</SelectItem>
-                  {workPackages.map((wp) => (
-                    <SelectItem key={wp.id} value={wp.id}>
-                      {wp.packageName} {wp.targetQuantity ? `(${wp.targetQuantity} ${wp.uom || "unit"})` : ""}
-                    </SelectItem>
-                  ))}
+                  {workPackages.map((wp) => {
+                    const wpQty =
+                      wp.targetQuantity !== null && wp.targetQuantity !== undefined
+                        ? wp.targetQuantity
+                        : wp.totalPlannedQty;
+                    const wpUom =
+                      wp.uom || wp.items?.[0]?.item?.uom?.code || "unit";
+                    return (
+                      <SelectItem key={wp.id} value={wp.id}>
+                        {wp.packageName} {wpQty ? `(${wpQty} ${wpUom})` : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
 

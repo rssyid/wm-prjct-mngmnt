@@ -34,6 +34,8 @@ interface PackageFormDialogProps {
     vendorName?: string | null;
     picName?: string | null;
     weightPct?: number;
+    targetQuantity?: number | string | null;
+    uom?: string | null;
     noPrUspk?: string | null;
     prUspkDate?: string | null;
     noPoSpk?: string | null;
@@ -75,6 +77,8 @@ export function PackageFormDialog({
   const [vendorId, setVendorId] = useState<string>("none");
   const [picName, setPicName] = useState("");
   const [weightPct, setWeightPct] = useState<string>("0");
+  const [targetQuantity, setTargetQuantity] = useState<string>("");
+  const [uom, setUom] = useState<string>("");
   const [noPrUspk, setNoPrUspk] = useState("");
   const [prUspkDate, setPrUspkDate] = useState("");
   const [noPoSpk, setNoPoSpk] = useState("");
@@ -100,7 +104,24 @@ export function PackageFormDialog({
     enabled: open,
   });
 
+  // Ambil daftar UOM dari master
+  const { data: uomData } = useQuery<{
+    success: boolean;
+    data: { id: string; code: string; name: string; isActive: boolean }[];
+  }>({
+    queryKey: ["master-uoms"],
+    queryFn: async () => {
+      const res = await fetch("/api/master?type=uom");
+      if (!res.ok) return { success: true, data: [] };
+      return res.json();
+    },
+    enabled: open,
+  });
+
   const vendors = vendorData?.data || [];
+  const uomList = React.useMemo(() => {
+    return (uomData?.data || []).filter((u) => u.isActive);
+  }, [uomData]);
 
   useEffect(() => {
     if (open) {
@@ -111,6 +132,13 @@ export function PackageFormDialog({
         setVendorId(initialData.vendorId || "none");
         setPicName(initialData.picName || "");
         setWeightPct(String(initialData.weightPct ?? 0));
+        setTargetQuantity(
+          initialData.targetQuantity !== null &&
+            initialData.targetQuantity !== undefined
+            ? String(initialData.targetQuantity)
+            : ""
+        );
+        setUom(initialData.uom || "");
         setNoPrUspk(initialData.noPrUspk || "");
         setPrUspkDate(
           initialData.prUspkDate
@@ -146,6 +174,8 @@ export function PackageFormDialog({
         setVendorId("none");
         setPicName("");
         setWeightPct("0");
+        setTargetQuantity("");
+        setUom("");
         setNoPrUspk("");
         setPrUspkDate("");
         setNoPoSpk("");
@@ -192,6 +222,8 @@ export function PackageFormDialog({
         vendorName: selectedVendor ? selectedVendor.name : null,
         picName: picName.trim() || null,
         weightPct: parseFloat(weightPct) || 0,
+        targetQuantity: targetQuantity.trim() ? parseFloat(targetQuantity) : null,
+        uom: uom.trim() || null,
         noPrUspk: noPrUspk.trim() || null,
         prUspkDate: prUspkDate || null,
         noPoSpk: noPoSpk.trim() || null,
@@ -312,6 +344,56 @@ export function PackageFormDialog({
                 onChange={(e) => setWeightPct(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="targetQuantity" className="text-xs">
+                Target Volume / Kuantitas
+              </Label>
+              <Input
+                id="targetQuantity"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="misal: 500"
+                value={targetQuantity}
+                onChange={(e) => setTargetQuantity(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Satuan Target (UOM)</Label>
+              <Select
+                value={uom || "none"}
+                onValueChange={(val) => setUom(val === "none" ? "" : val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Satuan (misal: m, m3)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">-- Tanpa Satuan / Otomatis --</SelectItem>
+                  {uom &&
+                    !uomList.some(
+                      (u) => u.code.toLowerCase() === uom.toLowerCase()
+                    ) && <SelectItem value={uom}>{uom}</SelectItem>}
+                  {uomList.map((u) => (
+                    <SelectItem key={u.id} value={u.code}>
+                      {u.code} ({u.name})
+                    </SelectItem>
+                  ))}
+                  {uomList.length === 0 && (
+                    <>
+                      <SelectItem value="m">m (Meter)</SelectItem>
+                      <SelectItem value="m3">m3 (Meter Kubik)</SelectItem>
+                      <SelectItem value="ha">ha (Hektar)</SelectItem>
+                      <SelectItem value="unit">unit</SelectItem>
+                      <SelectItem value="jam">jam</SelectItem>
+                      <SelectItem value="titik">titik</SelectItem>
+                      <SelectItem value="ls">ls (Lump Sum)</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
