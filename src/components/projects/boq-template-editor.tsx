@@ -13,6 +13,9 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import React from "react";
 
+import { cn } from "@/lib/utils";
+import { FieldError } from "react-hook-form";
+
 export interface BoqItem {
   itemCode: string;
   name: string;
@@ -21,12 +24,21 @@ export interface BoqItem {
   unitPrice: number;
 }
 
+export interface BoqItemError {
+  itemCode?: FieldError;
+  name?: FieldError;
+  uom?: FieldError;
+  qty?: FieldError;
+  unitPrice?: FieldError;
+}
+
 interface BoqTemplateEditorProps {
   items: BoqItem[];
   onChange: (items: BoqItem[]) => void;
+  errors?: BoqItemError[] | Record<string, unknown>;
 }
 
-export function BoqTemplateEditor({ items, onChange }: BoqTemplateEditorProps) {
+export function BoqTemplateEditor({ items, onChange, errors }: BoqTemplateEditorProps) {
   const handleItemChange = (index: number, field: keyof BoqItem, value: string | number) => {
     const updated = [...items];
     updated[index] = {
@@ -100,78 +112,125 @@ export function BoqTemplateEditor({ items, onChange }: BoqTemplateEditorProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              items.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="p-2">
-                    <Input
-                      value={item.itemCode}
-                      onChange={(e) =>
-                        handleItemChange(index, "itemCode", e.target.value)
-                      }
-                      className="h-8 text-xs font-mono"
-                      placeholder="Kode"
-                    />
-                  </TableCell>
-                  <TableCell className="p-2">
-                    <Input
-                      value={item.name}
-                      onChange={(e) =>
-                        handleItemChange(index, "name", e.target.value)
-                      }
-                      className="h-8 text-xs"
-                      placeholder="Nama material/jasa"
-                    />
-                  </TableCell>
-                  <TableCell className="p-2">
-                    <Input
-                      value={item.uom}
-                      onChange={(e) =>
-                        handleItemChange(index, "uom", e.target.value)
-                      }
-                      className="h-8 text-xs"
-                      placeholder="UoM"
-                    />
-                  </TableCell>
-                  <TableCell className="p-2">
-                    <Input
-                      type="number"
-                      step="any"
-                      value={item.qty}
-                      onChange={(e) =>
-                        handleItemChange(index, "qty", e.target.value)
-                      }
-                      className="h-8 text-xs tabular-nums text-right"
-                    />
-                  </TableCell>
-                  <TableCell className="p-2">
-                    <Input
-                      type="number"
-                      step="any"
-                      value={item.unitPrice || 0}
-                      onChange={(e) =>
-                        handleItemChange(index, "unitPrice", e.target.value)
-                      }
-                      className="h-8 text-xs tabular-nums text-right"
-                    />
-                  </TableCell>
-                  <TableCell className="p-2 text-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Hapus item BOQ ${item.name || index + 1}`}
-                      onClick={() => handleRemoveItem(index)}
-                      className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              items.map((item, index) => {
+                const itemErr = (
+                  Array.isArray(errors)
+                    ? errors[index]
+                    : (errors as Record<number, BoqItemError> | undefined)?.[index]
+                ) as BoqItemError | undefined;
+                return (
+                  <TableRow key={index} className={itemErr ? "bg-rose-50/20 dark:bg-rose-950/10" : undefined}>
+                    <TableCell className="p-2 align-top">
+                      <Input
+                        value={item.itemCode}
+                        onChange={(e) =>
+                          handleItemChange(index, "itemCode", e.target.value)
+                        }
+                        className={cn(
+                          "h-8 text-xs font-mono",
+                          itemErr?.itemCode && "border-rose-500 focus-visible:ring-rose-500"
+                        )}
+                        placeholder="Kode"
+                      />
+                      {itemErr?.itemCode?.message && (
+                        <p className="text-[10px] text-rose-500 mt-0.5">{itemErr.itemCode.message}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-2 align-top">
+                      <Input
+                        value={item.name}
+                        onChange={(e) =>
+                          handleItemChange(index, "name", e.target.value)
+                        }
+                        className={cn(
+                          "h-8 text-xs",
+                          itemErr?.name && "border-rose-500 focus-visible:ring-rose-500"
+                        )}
+                        placeholder="Nama material/jasa"
+                      />
+                      {itemErr?.name?.message && (
+                        <p className="text-[10px] text-rose-500 mt-0.5">{itemErr.name.message}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-2 align-top">
+                      <Input
+                        value={item.uom}
+                        onChange={(e) =>
+                          handleItemChange(index, "uom", e.target.value)
+                        }
+                        className={cn(
+                          "h-8 text-xs",
+                          itemErr?.uom && "border-rose-500 focus-visible:ring-rose-500"
+                        )}
+                        placeholder="UoM"
+                      />
+                      {itemErr?.uom?.message && (
+                        <p className="text-[10px] text-rose-500 mt-0.5">{itemErr.uom.message}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-2 align-top">
+                      <Input
+                        type="number"
+                        step="any"
+                        value={item.qty}
+                        onChange={(e) =>
+                          handleItemChange(index, "qty", e.target.value)
+                        }
+                        className={cn(
+                          "h-8 text-xs tabular-nums text-right",
+                          itemErr?.qty && "border-rose-500 focus-visible:ring-rose-500"
+                        )}
+                      />
+                      {itemErr?.qty?.message && (
+                        <p className="text-[10px] text-rose-500 mt-0.5">{itemErr.qty.message}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-2 align-top">
+                      <Input
+                        type="number"
+                        step="any"
+                        value={item.unitPrice || 0}
+                        onChange={(e) =>
+                          handleItemChange(index, "unitPrice", e.target.value)
+                        }
+                        className={cn(
+                          "h-8 text-xs tabular-nums text-right",
+                          itemErr?.unitPrice && "border-rose-500 focus-visible:ring-rose-500"
+                        )}
+                      />
+                      {itemErr?.unitPrice?.message && (
+                        <p className="text-[10px] text-rose-500 mt-0.5">{itemErr.unitPrice.message}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-2 text-center align-top pt-2.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Hapus item BOQ ${item.name || index + 1}`}
+                        onClick={() => handleRemoveItem(index)}
+                        className="h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
+
+      {!Array.isArray(errors) &&
+        typeof errors === "object" &&
+        errors !== null &&
+        "message" in errors &&
+        typeof (errors as { message?: unknown }).message === "string" && (
+          <p className="text-[11px] text-rose-500 font-medium">
+            {(errors as { message: string }).message}
+          </p>
+        )}
     </div>
   );
 }

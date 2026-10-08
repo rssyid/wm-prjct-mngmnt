@@ -83,15 +83,30 @@ export function ProjectTimelineTab({
     };
   }, [project]);
 
+  const rawPackages: GanttPackageItem[] = useMemo(() => {
+    if (Array.isArray(packagesData)) return packagesData;
+    if (Array.isArray((packagesData as unknown as { data: GanttPackageItem[] })?.data)) {
+      return (packagesData as unknown as { data: GanttPackageItem[] }).data;
+    }
+    return [];
+  }, [packagesData]);
+
+  const rawLogs: SCurveLog[] = useMemo(() => {
+    if (Array.isArray(logsData)) return logsData;
+    if (Array.isArray((logsData as unknown as { data: SCurveLog[] })?.data)) {
+      return (logsData as unknown as { data: SCurveLog[] }).data;
+    }
+    return [];
+  }, [logsData]);
+
   // Memoize Packages untuk S-Curve
   const sCurvePackages: SCurvePackage[] = useMemo(() => {
-    if (!packagesData) return [];
-    return packagesData.map((pkg) => ({
+    return rawPackages.map((pkg) => ({
       id: pkg.id,
       packageName: pkg.packageName,
       weightPct: pkg.weightPct,
     }));
-  }, [packagesData]);
+  }, [rawPackages]);
 
   if (isLoading) {
     return <TimelineTabSkeleton />;
@@ -110,8 +125,8 @@ export function ProjectTimelineTab({
     );
   }
 
-  const packages = packagesData || [];
-  const logs = logsData || [];
+  const packages = rawPackages;
+  const logs = rawLogs;
 
   return (
     <div className="space-y-6">

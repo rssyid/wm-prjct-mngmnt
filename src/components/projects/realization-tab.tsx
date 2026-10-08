@@ -87,24 +87,47 @@ export function RealizationTab({
   });
 
   // 4. Fetch detail proyek untuk memastikan currentWeek & progressPct up-to-date
-  const { data: projectData } = useQuery({
+  const { data: projectRes } = useQuery({
     queryKey: ["project-detail", projectId],
     queryFn: async () => {
       const res = await fetch(`/api/projects/${projectId}`);
       if (!res.ok) throw new Error("Gagal mengambil info proyek");
-      const json = await res.json();
-      return json.data;
+      return res.json();
     },
   });
+
+  interface ApiWrapper<T> {
+    data?: T;
+  }
+
+  const rawProject = projectRes as ApiWrapper<{ currentWeek?: number; progressPct?: number }> | { currentWeek?: number; progressPct?: number } | undefined;
+  const projectData = (rawProject && "data" in rawProject && rawProject.data) ? rawProject.data : (rawProject as { currentWeek?: number; progressPct?: number } | undefined);
 
   const currentWeek =
     projectData?.currentWeek ?? initialCurrentWeek ?? 1;
   const projectProgressPct =
     projectData?.progressPct ?? initialProgressPct ?? 0;
 
-  const packages = useMemo(() => packagesData || [], [packagesData]);
-  const progressLogs = useMemo(() => progressLogsData || [], [progressLogsData]);
-  const equipmentLogs = useMemo(() => equipmentLogsData || [], [equipmentLogsData]);
+  const packages: WorkPackageData[] = useMemo(() => {
+    if (Array.isArray(packagesData)) return packagesData;
+    const wrapped = packagesData as unknown as ApiWrapper<WorkPackageData[]> | undefined;
+    if (wrapped && Array.isArray(wrapped.data)) return wrapped.data;
+    return [];
+  }, [packagesData]);
+
+  const progressLogs: ProgressLogRow[] = useMemo(() => {
+    if (Array.isArray(progressLogsData)) return progressLogsData;
+    const wrapped = progressLogsData as unknown as ApiWrapper<ProgressLogRow[]> | undefined;
+    if (wrapped && Array.isArray(wrapped.data)) return wrapped.data;
+    return [];
+  }, [progressLogsData]);
+
+  const equipmentLogs: EquipmentLogRow[] = useMemo(() => {
+    if (Array.isArray(equipmentLogsData)) return equipmentLogsData;
+    const wrapped = equipmentLogsData as unknown as ApiWrapper<EquipmentLogRow[]> | undefined;
+    if (wrapped && Array.isArray(wrapped.data)) return wrapped.data;
+    return [];
+  }, [equipmentLogsData]);
 
   // Hitung ulang progres proyek tertimbang dari data paket lokal untuk verifikasi visual
   const calculatedTotalProgress = useMemo(() => {

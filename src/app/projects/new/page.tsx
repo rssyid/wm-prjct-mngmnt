@@ -237,10 +237,20 @@ export default function NewProjectPage() {
       setIsSubmitting(true);
       setErrorMessage(null);
 
+      // Bersihkan baris BOQ yang kosong sebelum dikirim ke API
+      const cleanedBoqItems = (values.boqItems || []).filter(
+        (it) => it.name?.trim() || it.itemCode?.trim()
+      );
+
+      const payload = {
+        ...values,
+        boqItems: cleanedBoqItems.length > 0 ? cleanedBoqItems : null,
+      };
+
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
 
       const result = await res.json().catch(() => ({}));
@@ -306,7 +316,34 @@ export default function NewProjectPage() {
         <form
           onSubmit={handleSubmit(onSubmit, (formErrors) => {
             console.error("Form validation errors:", formErrors);
-            const firstError = Object.values(formErrors)[0]?.message;
+
+            const getFirstErrorMessage = (errors: Record<string, unknown>): string | null => {
+              for (const [, err] of Object.entries(errors)) {
+                if (!err) continue;
+                if (
+                  typeof err === "object" &&
+                  "message" in err &&
+                  typeof (err as { message?: unknown }).message === "string"
+                ) {
+                  return (err as { message: string }).message;
+                }
+                if (Array.isArray(err)) {
+                  for (let i = 0; i < err.length; i++) {
+                    const itemErr = err[i];
+                    if (itemErr && typeof itemErr === "object") {
+                      const nested = getFirstErrorMessage(itemErr as Record<string, unknown>);
+                      if (nested) return `Item BOQ baris ${i + 1}: ${nested}`;
+                    }
+                  }
+                } else if (typeof err === "object") {
+                  const nested = getFirstErrorMessage(err as Record<string, unknown>);
+                  if (nested) return nested;
+                }
+              }
+              return null;
+            };
+
+            const firstError = getFirstErrorMessage(formErrors);
             setErrorMessage(
               firstError
                 ? `Validasi formulir belum lengkap: ${firstError}`
@@ -738,7 +775,8 @@ export default function NewProjectPage() {
               <div className="pt-2">
                 <BoqTemplateEditor
                   items={currentBoqItems}
-                  onChange={(items) => setValue("boqItems", items)}
+                  onChange={(items) => setValue("boqItems", items, { shouldValidate: true })}
+                  errors={errors.boqItems}
                 />
               </div>
             </CardContent>

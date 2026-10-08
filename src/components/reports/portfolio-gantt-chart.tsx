@@ -71,10 +71,14 @@ export function PortfolioGanttChart({
     enabled: !initialProjects,
   });
 
-  const rawProjects = useMemo(
-    () => initialProjects || fetchedData || [],
-    [initialProjects, fetchedData]
-  );
+  const rawProjects: PortfolioProjectItem[] = useMemo(() => {
+    if (initialProjects && Array.isArray(initialProjects)) return initialProjects;
+    if (Array.isArray(fetchedData)) return fetchedData;
+    if (Array.isArray((fetchedData as unknown as { data: PortfolioProjectItem[] })?.data)) {
+      return (fetchedData as unknown as { data: PortfolioProjectItem[] }).data;
+    }
+    return [];
+  }, [initialProjects, fetchedData]);
 
   // 1. Filter Proyek
   const filteredProjects = useMemo(() => {

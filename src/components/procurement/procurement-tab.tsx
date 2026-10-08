@@ -82,10 +82,7 @@ export function ProcurementTab({
   const isCompleted = projectStatus === ProjectStatus.COMPLETED;
 
   // Fetch daftar paket pengadaan proyek
-  const { data, isLoading } = useQuery<{
-    success: boolean;
-    data: WorkPackageRow[];
-  }>({
+  const { data, isLoading } = useQuery<WorkPackageRow[]>({
     queryKey: ["project-packages", projectId],
     queryFn: async () => {
       const res = await fetch(`/api/projects/${projectId}/packages`);
@@ -93,11 +90,16 @@ export function ProcurementTab({
         const err = await res.json();
         throw new Error(err.error || "Gagal mengambil daftar paket kerja");
       }
-      return res.json();
+      const json = await res.json();
+      return (json.data || []) as WorkPackageRow[];
     },
   });
 
-  const packages = data?.data || [];
+  const packages: WorkPackageRow[] = Array.isArray(data)
+    ? data
+    : Array.isArray((data as unknown as { data: WorkPackageRow[] })?.data)
+    ? (data as unknown as { data: WorkPackageRow[] }).data
+    : [];
 
   // Hitung ringkasan statistik
   const totalWeight = packages.reduce((sum, p) => sum + (p.weightPct || 0), 0);
