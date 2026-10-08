@@ -107,7 +107,7 @@ export function ProjectGanttChart({
           (curr.getTime() - min.getTime()) / (7 * 24 * 60 * 60 * 1000)
         ) + 1;
         ticks.push({
-          label: `M-${weekNum}`,
+          label: `Minggu ${weekNum}`,
           subLabel: curr.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
           offsetPct: Math.min(100, Math.max(0, offsetPct)),
         });
@@ -119,8 +119,8 @@ export function ProjectGanttChart({
       while (curr <= max) {
         const offsetPct = ((curr.getTime() - min.getTime()) / (diffDays * 24 * 60 * 60 * 1000)) * 100;
         ticks.push({
-          label: curr.toLocaleDateString("id-ID", { month: "short", year: "2-digit" }),
-          subLabel: "",
+          label: curr.toLocaleDateString("id-ID", { month: "long" }),
+          subLabel: curr.getFullYear().toString(),
           offsetPct: Math.min(100, Math.max(0, offsetPct)),
         });
         curr.setMonth(curr.getMonth() + 1);
@@ -298,15 +298,21 @@ export function ProjectGanttChart({
               </div>
 
               {/* Time Scale Columns Header */}
-              <div className="flex-1 relative h-10">
+              <div className="flex-1 relative h-12">
                 {timeTicks.map((tick, i) => (
                   <div
                     key={i}
-                    className="absolute top-0 bottom-0 border-l border-border/60 pl-1.5 pt-1 text-[10px] text-muted-foreground truncate"
+                    className="absolute top-0 bottom-0 border-l border-border/60 pl-1.5 py-1 flex flex-col justify-center leading-tight overflow-hidden"
                     style={{ left: `${tick.offsetPct}%` }}
                   >
-                    <span className="font-semibold text-foreground/85">{tick.label}</span>
-                    {tick.subLabel && <span className="ml-1 opacity-70">({tick.subLabel})</span>}
+                    <span className="font-semibold text-foreground/90 text-[10px] truncate whitespace-nowrap">
+                      {tick.label}
+                    </span>
+                    {tick.subLabel ? (
+                      <span className="text-[9px] text-muted-foreground truncate whitespace-nowrap">
+                        {tick.subLabel}
+                      </span>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -371,7 +377,7 @@ export function ProjectGanttChart({
                       className="absolute top-0 bottom-0 z-20 border-l-2 border-dashed border-rose-500/80 pointer-events-none"
                       style={{ left: `${todayOffsetPct}%` }}
                     >
-                      <div className="sticky top-11 -translate-x-1/2 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+                      <div className="sticky top-12 -translate-x-1/2 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
                         Hari Ini
                       </div>
                     </div>

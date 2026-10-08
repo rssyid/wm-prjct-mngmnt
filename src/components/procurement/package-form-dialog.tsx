@@ -39,6 +39,8 @@ interface PackageFormDialogProps {
     noPoSpk?: string | null;
     poSpkDate?: string | null;
     estDeliveryDate?: string | null;
+    planStartDate?: string | null;
+    planEndDate?: string | null;
     contractOrPoAmount?: number | string;
     remarks?: string | null;
   } | null;
@@ -78,6 +80,8 @@ export function PackageFormDialog({
   const [noPoSpk, setNoPoSpk] = useState("");
   const [poSpkDate, setPoSpkDate] = useState("");
   const [estDeliveryDate, setEstDeliveryDate] = useState("");
+  const [planStartDate, setPlanStartDate] = useState("");
+  const [planEndDate, setPlanEndDate] = useState("");
   const [contractOrPoAmount, setContractOrPoAmount] = useState<string>("0");
   const [remarks, setRemarks] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -124,6 +128,16 @@ export function PackageFormDialog({
             ? new Date(initialData.estDeliveryDate).toISOString().split("T")[0]
             : ""
         );
+        setPlanStartDate(
+          initialData.planStartDate
+            ? new Date(initialData.planStartDate).toISOString().split("T")[0]
+            : ""
+        );
+        setPlanEndDate(
+          initialData.planEndDate
+            ? new Date(initialData.planEndDate).toISOString().split("T")[0]
+            : ""
+        );
         setContractOrPoAmount(String(initialData.contractOrPoAmount ?? 0));
         setRemarks(initialData.remarks || "");
       } else {
@@ -137,6 +151,8 @@ export function PackageFormDialog({
         setNoPoSpk("");
         setPoSpkDate("");
         setEstDeliveryDate("");
+        setPlanStartDate("");
+        setPlanEndDate("");
         setContractOrPoAmount("0");
         setRemarks("");
       }
@@ -158,6 +174,16 @@ export function PackageFormDialog({
         }
       }
 
+      if (planStartDate && planEndDate) {
+        const dStart = new Date(planStartDate);
+        const dEnd = new Date(planEndDate);
+        if (dStart > dEnd) {
+          throw new Error(
+            "Estimasi tanggal mulai harus lebih awal atau sama dengan estimasi tanggal selesai"
+          );
+        }
+      }
+
       const selectedVendor = vendors.find((v) => v.id === vendorId);
       const payload = {
         packageName: packageName.trim(),
@@ -171,6 +197,8 @@ export function PackageFormDialog({
         noPoSpk: noPoSpk.trim() || null,
         poSpkDate: poSpkDate || null,
         estDeliveryDate: estDeliveryDate || null,
+        planStartDate: planStartDate || null,
+        planEndDate: planEndDate || null,
         contractOrPoAmount: parseFloat(contractOrPoAmount) || 0,
         remarks: remarks.trim() || null,
       };
@@ -394,6 +422,44 @@ export function PackageFormDialog({
                   type="date"
                   value={estDeliveryDate}
                   onChange={(e) => setEstDeliveryDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bagian Jadwal Pelaksanaan (Gantt Chart) */}
+          <div className="rounded-md border p-3 bg-muted/20 space-y-3">
+            <div>
+              <h4 className="font-semibold text-foreground text-xs">
+                Jadwal Pelaksanaan (Gantt Chart)
+              </h4>
+              <p className="text-[11px] text-muted-foreground">
+                Estimasi periode mulai dan selesai pengerjaan paket untuk timeline Gantt.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="planStartDate" className="text-xs">
+                  Estimasi Tanggal Mulai (Plan Start)
+                </Label>
+                <Input
+                  id="planStartDate"
+                  type="date"
+                  value={planStartDate}
+                  onChange={(e) => setPlanStartDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="planEndDate" className="text-xs">
+                  Estimasi Tanggal Selesai (Plan End)
+                </Label>
+                <Input
+                  id="planEndDate"
+                  type="date"
+                  value={planEndDate}
+                  onChange={(e) => setPlanEndDate(e.target.value)}
                 />
               </div>
             </div>

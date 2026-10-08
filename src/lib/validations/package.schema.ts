@@ -92,6 +92,18 @@ export const packageCreateSchema = z
       message: "Tanggal PR/USPK harus lebih awal atau sama dengan tanggal PO/SPK",
       path: ["poSpkDate"],
     }
+  )
+  .refine(
+    (data) => {
+      if (data.planStartDate && data.planEndDate) {
+        return data.planStartDate <= data.planEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Estimasi tanggal mulai harus lebih awal atau sama dengan tanggal selesai",
+      path: ["planEndDate"],
+    }
   );
 
 export type PackageCreateInput = z.infer<typeof packageCreateSchema>;
@@ -142,6 +154,18 @@ export const packageUpdateSchema = z
     {
       message: "Tanggal PR/USPK harus lebih awal atau sama dengan tanggal PO/SPK",
       path: ["poSpkDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.planStartDate && data.planEndDate) {
+        return data.planStartDate <= data.planEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Estimasi tanggal mulai harus lebih awal atau sama dengan tanggal selesai",
+      path: ["planEndDate"],
     }
   );
 

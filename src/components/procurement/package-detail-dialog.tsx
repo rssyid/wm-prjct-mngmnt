@@ -117,6 +117,8 @@ interface FullPackageDetail {
   contractOrPoAmount: number | string;
   estDeliveryDate?: string | null;
   actualDeliveryDate?: string | null;
+  planStartDate?: string | null;
+  planEndDate?: string | null;
   deliveryDelayDays?: number;
   remarks?: string | null;
   vendor?: { id: string; name: string } | null;
@@ -1043,6 +1045,22 @@ export function PackageDetailDialog({
                         </span>
                         <span className="font-semibold text-foreground">
                           {formatDate(pkg.actualDeliveryDate)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">
+                          Rencana Mulai (Gantt):
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {formatDate(pkg.planStartDate)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">
+                          Rencana Selesai (Gantt):
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {formatDate(pkg.planEndDate)}
                         </span>
                       </div>
                       <div>
