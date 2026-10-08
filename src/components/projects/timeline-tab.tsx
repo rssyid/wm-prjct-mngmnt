@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, GanttChartSquare, TableProperties } from "lucide-react";
+import { AfceStatus } from "@prisma/client";
 import React, { useMemo, useState } from "react";
 
 interface ProjectTimelineTabProps {
@@ -26,8 +27,12 @@ interface ProjectTimelineTabProps {
     targetEndDate?: string | Date | null;
     currentWeek?: number;
     afceDocument?: {
+      id?: string;
       emailSubmittedDate?: string | Date | null;
       mcaApprovalDate?: string | Date | null;
+      status?: AfceStatus | string | null;
+      noAr?: string | null;
+      currentAttempt?: number;
     } | null;
     bastDocument?: {
       submittedAt?: string | Date | null;
@@ -173,6 +178,7 @@ export function ProjectTimelineTab({
           milestones={milestones}
           targetStartDate={project.targetStartDate}
           targetEndDate={project.targetEndDate}
+          afceDocument={project.afceDocument}
         />
       ) : (
         <ProjectGanttChart packages={packages} milestones={milestones} />

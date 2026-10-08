@@ -13,15 +13,25 @@ import {
 } from "@/components/ui/tooltip";
 import { PACKAGE_CATEGORY_CONFIG } from "@/lib/constants/status";
 import { cn, formatDate } from "@/lib/utils";
-import { PackageCategory } from "@prisma/client";
-import { Calendar, Check } from "lucide-react";
+import { AfceStatus, PackageCategory } from "@prisma/client";
+import { Calendar, Check, FileCheck } from "lucide-react";
 import React, { useMemo } from "react";
+
+export interface AfceInfo {
+  id?: string;
+  emailSubmittedDate?: string | Date | null;
+  mcaApprovalDate?: string | Date | null;
+  status?: AfceStatus | string | null;
+  noAr?: string | null;
+  currentAttempt?: number;
+}
 
 export interface ProjectMatrixGanttChartProps {
   packages: GanttPackageItem[];
   milestones?: ProjectMilestoneInfo;
   targetStartDate?: string | Date | null;
   targetEndDate?: string | Date | null;
+  afceDocument?: AfceInfo | null;
   className?: string;
 }
 
@@ -40,6 +50,26 @@ interface CellData {
   styleType: CellStyleType;
   symbol: string;
   tooltipText: string;
+}
+
+interface MatrixRowItem {
+  id: string;
+  itemIndex: string;
+  packageName: string;
+  subLabel?: string;
+  isAfce?: boolean;
+  planStartDate?: string | Date | null;
+  planEndDate?: string | Date | null;
+  evaluateCell: (week: WeekInfo) => CellData;
+}
+
+interface MatrixGroup {
+  id: string;
+  groupIndex: number;
+  label: string;
+  badgeCount?: number;
+  isAfceGroup?: boolean;
+  items: MatrixRowItem[];
 }
 
 /**
@@ -72,6 +102,7 @@ export function ProjectMatrixGanttChart({
   milestones,
   targetStartDate,
   targetEndDate,
+  afceDocument,
   className,
 }: ProjectMatrixGanttChartProps) {
   const now = useMemo(() => new Date(), []);
@@ -84,6 +115,12 @@ export function ProjectMatrixGanttChart({
     if (targetEndDate) dates.push(new Date(targetEndDate).getTime());
     if (milestones?.targetStartDate) dates.push(new Date(milestones.targetStartDate).getTime());
     if (milestones?.targetEndDate) dates.push(new Date(milestones.targetEndDate).getTime());
+
+    // Tanggal AFCE
+    if (afceDocument?.emailSubmittedDate) dates.push(new Date(afceDocument.emailSubmittedDate).getTime());
+    if (afceDocument?.mcaApprovalDate) dates.push(new Date(afceDocument.mcaApprovalDate).getTime());
+    if (milestones?.afceSubmittedDate) dates.push(new Date(milestones.afceSubmittedDate).getTime());
+    if (milestones?.afceApprovedDate) dates.push(new Date(milestones.afceApprovedDate).getTime());
 
     packages.forEach((pkg) => {
       if (pkg.planStartDate) dates.push(new Date(pkg.planStartDate).getTime());
@@ -135,7 +172,6 @@ export function ProjectMatrixGanttChart({
       idx++;
     }
 
-    // Jika sekarang lewat dari rentang, tandai index terakhir
     if (foundCurrentWeek === -1 && weekList.length > 0) {
       if (nowTs > weekList[weekList.length - 1].endDate.getTime()) {
         foundCurrentWeek = weekList.length - 1;
@@ -145,143 +181,264 @@ export function ProjectMatrixGanttChart({
     }
 
     return { weeks: weekList, currentWeekIndex: foundCurrentWeek };
-  }, [packages, milestones, targetStartDate, targetEndDate, now]);
+  }, [packages, milestones, targetStartDate, targetEndDate, afceDocument, now]);
 
-  // 2. Kelompokkan Paket Kerja per Kategori
-  const groupedPackages = useMemo(() => {
-    const groups: {
-      category: PackageCategory;
-      label: string;
-      items: (GanttPackageItem & { itemIndex: string })[];
-    }[] = [];
+  // 2. Kelompokkan Data Termasuk Baris Approval AFCE
+  const matrixGroups = useMemo(() => {
+    // Helper evaluasi status sel mingguan untuk paket kerja biasa
+    const evaluatePackageCell = (
+      pkg: GanttPackageItem,
+      week: WeekInfo
+    ): CellData => {
+      const wStart = week.startDate.getTime();
+      const wEnd = week.endDate.getTime();
 
+      const pStart = pkg.planStartDate ? new Date(pkg.planStartDate).getTime() : null;
+      const pEnd = pkg.planEndDate ? new Date(pkg.planEndDate).getTime() : null;
+      const aStart = pkg.actualStartDate ? new Date(pkg.actualStartDate).getTime() : null;
+      const aEnd = pkg.actualEndDate ? new Date(pkg.actualEndDate).getTime() : null;
+
+      const isCompleted =
+        pkg.progressPct >= 100 ||
+        pkg.status === "COMPLETED" ||
+        pkg.status === "DELIVERED";
+
+      // 1) Rencana (Plan): irisan dengan [pStart, pEnd]
+      const isPlan = Boolean(pStart && pEnd && !(wEnd < pStart || wStart > pEnd));
+
+      // 2) Keterlambatan / Target Revisi:
+      let isRevised = false;
+
+      if (pEnd && wStart > pEnd) {
+        if (aEnd && aEnd > pEnd) {
+          // Override batas akhir dari actualEndDate
+          if (wStart <= aEnd) {
+            isRevised = true;
+          }
+        } else if (!isCompleted) {
+          // Otomatis batas akhir hingga minggu berjalan saat ini (+1 minggu buffer)
+          const autoLimit = Math.max(now.getTime(), pEnd) + 7 * 24 * 60 * 60 * 1000;
+          if (wStart <= autoLimit) {
+            isRevised = true;
+          }
+        }
+      }
+
+      // 3) Menentukan warna sel
+      let styleType: CellStyleType = "EMPTY";
+      if (isRevised) {
+        if (week.isCurrentWeek) {
+          styleType = "THIS_WEEK_REVISED"; // Oranye
+        } else {
+          styleType = "REVISED"; // Kuning
+        }
+      } else if (isPlan) {
+        styleType = "PLAN"; // Abu-abu
+      }
+
+      // 4) Menentukan simbol di dalam sel
+      let symbol = "";
+
+      // Simbol Selesai (✓)
+      if (isCompleted) {
+        const targetFinishTs = aEnd || pEnd;
+        if (targetFinishTs && wStart <= targetFinishTs && targetFinishTs <= wEnd) {
+          symbol = "✓";
+        } else if (!targetFinishTs && isPlan && wEnd >= (pEnd || 0)) {
+          symbol = "✓";
+        }
+      }
+
+      // Simbol Progres (#)
+      if (!symbol && (pkg.progressPct > 0 || (aStart && aStart <= wEnd))) {
+        const activeStart = aStart || pStart;
+        const activeEnd = isCompleted ? (aEnd || pEnd || now.getTime()) : now.getTime();
+
+        if (activeStart && wEnd >= activeStart && wStart <= activeEnd) {
+          symbol = "#";
+        }
+      }
+
+      let tooltipDesc = "Di luar jadwal";
+      if (styleType === "THIS_WEEK_REVISED") {
+        tooltipDesc = "Target Revisi (Minggu Berjalan)";
+      } else if (styleType === "REVISED") {
+        tooltipDesc = "Target Revisi";
+      } else if (styleType === "PLAN") {
+        tooltipDesc = "Jadwal Rencana (Plan)";
+      }
+
+      if (symbol === "✓") {
+        tooltipDesc += " - Pekerjaan Selesai";
+      } else if (symbol === "#") {
+        tooltipDesc += ` - Progres Berjalan (${pkg.progressPct}%)`;
+      }
+
+      return {
+        styleType,
+        symbol,
+        tooltipText: `${pkg.packageName} (${week.label}): ${tooltipDesc}`,
+      };
+    };
+
+    const list: MatrixGroup[] = [];
+    let groupIndexCounter = 1;
+
+    // A. Baris Administrasi & Pengesahan Dokumen AR / AFCE
+    const afceStart =
+      afceDocument?.emailSubmittedDate ||
+      milestones?.afceSubmittedDate ||
+      targetStartDate;
+
+    let afceEnd =
+      afceDocument?.mcaApprovalDate ||
+      milestones?.afceApprovedDate;
+
+    if (!afceEnd && afceStart) {
+      const est = new Date(afceStart);
+      est.setDate(est.getDate() + 14); // default SLA estimasi review 14 hari
+      afceEnd = est;
+    }
+
+    const afceStatus = afceDocument?.status || (
+      afceDocument?.mcaApprovalDate || milestones?.afceApprovedDate
+        ? "APPROVED"
+        : afceDocument?.emailSubmittedDate || milestones?.afceSubmittedDate
+        ? "SUBMITTED"
+        : "PENDING"
+    );
+
+    const isApproved = afceStatus === "APPROVED";
+    const isSubmitted = afceStatus === "SUBMITTED" || isApproved;
+    const isRejected = afceStatus === "REJECTED";
+
+    const evaluateAfceCell = (week: WeekInfo): CellData => {
+      const wStart = week.startDate.getTime();
+      const wEnd = week.endDate.getTime();
+
+      const sTs = afceStart ? new Date(afceStart).getTime() : null;
+      const eTs = afceEnd ? new Date(afceEnd).getTime() : null;
+      const rawApprovalDate = afceDocument?.mcaApprovalDate || milestones?.afceApprovedDate;
+      const appTs = rawApprovalDate ? new Date(rawApprovalDate).getTime() : null;
+
+      const isPlanRange = Boolean(sTs && eTs && !(wEnd < sTs || wStart > eTs));
+
+      let styleType: CellStyleType = "EMPTY";
+      let symbol = "";
+
+      if (isApproved) {
+        if (appTs && wStart <= appTs && appTs <= wEnd) {
+          styleType = "PLAN";
+          symbol = "✓";
+        } else if (sTs && appTs && wEnd >= sTs && wStart <= appTs) {
+          styleType = "PLAN";
+          symbol = "#";
+        } else if (isPlanRange) {
+          styleType = "PLAN";
+        }
+      } else if (isSubmitted) {
+        const isOverdue = eTs && wStart > eTs;
+        if (isOverdue) {
+          styleType = week.isCurrentWeek ? "THIS_WEEK_REVISED" : "REVISED";
+        } else if (isPlanRange) {
+          styleType = "PLAN";
+        }
+
+        if (sTs && wEnd >= sTs && wStart <= Math.max(now.getTime(), eTs || 0)) {
+          symbol = "#";
+        }
+      } else if (isRejected) {
+        if (eTs && wStart > eTs) {
+          styleType = "REVISED";
+          symbol = "#";
+        } else if (isPlanRange) {
+          styleType = "PLAN";
+        }
+      } else {
+        if (isPlanRange) {
+          styleType = "PLAN";
+        }
+      }
+
+      let tooltipDesc = "Administrasi & Pengesahan AR/AFCE";
+      if (symbol === "✓") {
+        tooltipDesc = `Dokumen AR/AFCE Disetujui (Approved) ✓${
+          afceDocument?.noAr ? ` - ${afceDocument.noAr}` : ""
+        }`;
+      } else if (symbol === "#") {
+        tooltipDesc = `Proses Pengajuan & Verifikasi Approval AR/AFCE`;
+      } else if (styleType === "THIS_WEEK_REVISED") {
+        tooltipDesc = `Target Persetujuan AR/AFCE Melebihi Batas SLA (Minggu Ini)`;
+      } else if (styleType === "REVISED") {
+        tooltipDesc = `Target Persetujuan AR/AFCE Terlambat`;
+      } else if (styleType === "PLAN") {
+        tooltipDesc = `Jadwal Pengajuan & Pengesahan AR/AFCE`;
+      }
+
+      return {
+        styleType,
+        symbol,
+        tooltipText: tooltipDesc,
+      };
+    };
+
+    // Selalu masukkan grup Administrasi & Pengesahan AR/AFCE
+    list.push({
+      id: "group-afce",
+      groupIndex: groupIndexCounter++,
+      label: "Administrasi & Pengesahan Dokumen",
+      isAfceGroup: true,
+      items: [
+        {
+          id: "afce-approval-row",
+          itemIndex: "a",
+          packageName: "Administrasi & pengesahan AR/AFCE/PO",
+          subLabel: afceDocument?.noAr
+            ? `No. AR: ${afceDocument.noAr}`
+            : isApproved
+            ? "Status: Disetujui"
+            : isSubmitted
+            ? "Status: Menunggu Persetujuan"
+            : "Status: Persiapan Dokumen",
+          isAfce: true,
+          planStartDate: afceStart,
+          planEndDate: afceEnd,
+          evaluateCell: evaluateAfceCell,
+        },
+      ],
+    });
+
+    // B. Groups dari Paket Kerja Fisik/Pengadaan
     const map = new Map<PackageCategory, GanttPackageItem[]>();
-
     packages.forEach((pkg) => {
       const cat = pkg.category || PackageCategory.MATERIAL;
-      if (!map.has(cat)) {
-        map.set(cat, []);
-      }
+      if (!map.has(cat)) map.set(cat, []);
       map.get(cat)!.push(pkg);
     });
 
     const categories = Array.from(map.keys());
-
     categories.forEach((cat) => {
       const pkgs = map.get(cat) || [];
-      const itemsWithLetter = pkgs.map((p, i) => ({
-        ...p,
-        itemIndex: String.fromCharCode(97 + (i % 26)), // a, b, c, ...
+      const packageItems: MatrixRowItem[] = pkgs.map((pkg, i) => ({
+        id: pkg.id,
+        itemIndex: String.fromCharCode(97 + (i % 26)),
+        packageName: pkg.packageName,
+        planStartDate: pkg.planStartDate,
+        planEndDate: pkg.planEndDate,
+        evaluateCell: (week: WeekInfo) => evaluatePackageCell(pkg, week),
       }));
 
-      groups.push({
-        category: cat,
+      list.push({
+        id: `cat-${cat}`,
+        groupIndex: groupIndexCounter++,
         label: PACKAGE_CATEGORY_CONFIG[cat]?.label || cat,
-        items: itemsWithLetter,
+        badgeCount: pkgs.length,
+        items: packageItems,
       });
     });
 
-    return groups;
-  }, [packages]);
-
-  // 3. Evaluasi status sel mingguan untuk setiap paket
-  const evaluateCell = (
-    pkg: GanttPackageItem,
-    week: WeekInfo
-  ): CellData => {
-    const wStart = week.startDate.getTime();
-    const wEnd = week.endDate.getTime();
-
-    const pStart = pkg.planStartDate ? new Date(pkg.planStartDate).getTime() : null;
-    const pEnd = pkg.planEndDate ? new Date(pkg.planEndDate).getTime() : null;
-    const aStart = pkg.actualStartDate ? new Date(pkg.actualStartDate).getTime() : null;
-    const aEnd = pkg.actualEndDate ? new Date(pkg.actualEndDate).getTime() : null;
-
-    const isCompleted =
-      pkg.progressPct >= 100 ||
-      pkg.status === "COMPLETED" ||
-      pkg.status === "DELIVERED";
-
-    // 1) Rencana (Plan): irisan dengan [pStart, pEnd]
-    const isPlan = Boolean(pStart && pEnd && !(wEnd < pStart || wStart > pEnd));
-
-    // 2) Keterlambatan / Target Revisi:
-    // Opsi B (Override manual): jika actualEndDate ditentukan melampaui planEndDate
-    // Opsi A (Otomatis): jika belum selesai dan waktu sudah melampaui planEndDate
-    let isRevised = false;
-
-    if (pEnd && wStart > pEnd) {
-      if (aEnd && aEnd > pEnd) {
-        // Override batas akhir dari actualEndDate
-        if (wStart <= aEnd) {
-          isRevised = true;
-        }
-      } else if (!isCompleted) {
-        // Otomatis batas akhir hingga minggu berjalan saat ini (+1 minggu untuk antisipasi)
-        const autoLimit = Math.max(now.getTime(), pEnd) + 7 * 24 * 60 * 60 * 1000;
-        if (wStart <= autoLimit) {
-          isRevised = true;
-        }
-      }
-    }
-
-    // 3) Menentukan warna sel
-    let styleType: CellStyleType = "EMPTY";
-    if (isRevised) {
-      if (week.isCurrentWeek) {
-        styleType = "THIS_WEEK_REVISED"; // Oranye
-      } else {
-        styleType = "REVISED"; // Kuning
-      }
-    } else if (isPlan) {
-      styleType = "PLAN"; // Abu-abu
-    }
-
-    // 4) Menentukan simbol di dalam sel
-    let symbol = "";
-
-    // Simbol Selesai (✓)
-    if (isCompleted) {
-      // Diletakkan di minggu penyelesaian
-      const targetFinishTs = aEnd || pEnd;
-      if (targetFinishTs && wStart <= targetFinishTs && targetFinishTs <= wEnd) {
-        symbol = "✓";
-      } else if (!targetFinishTs && isPlan && wEnd >= (pEnd || 0)) {
-        symbol = "✓";
-      }
-    }
-
-    // Simbol Progres (#)
-    if (!symbol && (pkg.progressPct > 0 || (aStart && aStart <= wEnd))) {
-      const activeStart = aStart || pStart;
-      const activeEnd = isCompleted ? (aEnd || pEnd || now.getTime()) : now.getTime();
-
-      if (activeStart && wEnd >= activeStart && wStart <= activeEnd) {
-        symbol = "#";
-      }
-    }
-
-    let tooltipDesc = "Di luar jadwal";
-    if (styleType === "THIS_WEEK_REVISED") {
-      tooltipDesc = "Target Revisi (Minggu Berjalan)";
-    } else if (styleType === "REVISED") {
-      tooltipDesc = "Target Revisi";
-    } else if (styleType === "PLAN") {
-      tooltipDesc = "Jadwal Rencana (Plan)";
-    }
-
-    if (symbol === "✓") {
-      tooltipDesc += " - Pekerjaan Selesai";
-    } else if (symbol === "#") {
-      tooltipDesc += ` - Progres Berjalan (${pkg.progressPct}%)`;
-    }
-
-    return {
-      styleType,
-      symbol,
-      tooltipText: `${pkg.packageName} (${week.label}): ${tooltipDesc}`,
-    };
-  };
+    return list;
+  }, [afceDocument, milestones, targetStartDate, packages, now]);
 
   const lastUpdateStr = useMemo(() => {
     return now.toLocaleDateString("id-ID", {
@@ -312,6 +469,22 @@ export function ProjectMatrixGanttChart({
         </div>
 
         <div className="flex items-center gap-2">
+          {afceDocument && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[11px] font-medium border flex items-center gap-1",
+                afceDocument.status === "APPROVED"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300"
+                  : afceDocument.status === "SUBMITTED"
+                  ? "bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300"
+                  : "bg-slate-50 text-slate-700 border-slate-300 dark:bg-slate-900"
+              )}
+            >
+              <FileCheck className="h-3 w-3" />
+              AFCE: {afceDocument.status || "DRAFT"}
+            </Badge>
+          )}
           <Badge variant="outline" className="text-[11px] font-normal">
             Total {packages.length} Paket Kerja
           </Badge>
@@ -337,13 +510,13 @@ export function ProjectMatrixGanttChart({
                 </th>
                 <th
                   rowSpan={2}
-                  className="min-w-[220px] max-w-[280px] px-3 py-2 text-left border-r border-border sticky left-12 z-30 bg-muted/95 backdrop-blur-xs"
+                  className="min-w-[240px] max-w-[300px] px-3 py-2 text-left border-r border-border sticky left-12 z-30 bg-muted/95 backdrop-blur-xs"
                 >
                   Job Item
                 </th>
                 <th
                   colSpan={2}
-                  className="px-2 py-1 text-center border-r border-border sticky left-[calc(3rem+220px)] md:left-[calc(3rem+280px)] z-30 bg-muted/95 backdrop-blur-xs min-w-[130px]"
+                  className="px-2 py-1 text-center border-r border-border sticky left-[calc(3rem+240px)] md:left-[calc(3rem+300px)] z-30 bg-muted/95 backdrop-blur-xs min-w-[130px]"
                 >
                   Plan
                 </th>
@@ -357,10 +530,10 @@ export function ProjectMatrixGanttChart({
 
               {/* Baris 2: Start, End, W1, W2, ... */}
               <tr className="bg-muted/60 text-[11px] font-medium border-b border-border">
-                <th className="w-16 px-1.5 py-1 text-center border-r border-border sticky left-[calc(3rem+220px)] md:left-[calc(3rem+280px)] z-30 bg-muted/95 backdrop-blur-xs">
+                <th className="w-16 px-1.5 py-1 text-center border-r border-border sticky left-[calc(3rem+240px)] md:left-[calc(3rem+300px)] z-30 bg-muted/95 backdrop-blur-xs">
                   Start
                 </th>
-                <th className="w-16 px-1.5 py-1 text-center border-r border-border sticky left-[calc(3rem+220px+4rem)] md:left-[calc(3rem+280px+4rem)] z-30 bg-muted/95 backdrop-blur-xs">
+                <th className="w-16 px-1.5 py-1 text-center border-r border-border sticky left-[calc(3rem+240px+4rem)] md:left-[calc(3rem+300px+4rem)] z-30 bg-muted/95 backdrop-blur-xs">
                   End
                 </th>
 
@@ -390,19 +563,19 @@ export function ProjectMatrixGanttChart({
 
             {/* Isi Tabel */}
             <tbody className="divide-y divide-border">
-              {groupedPackages.length === 0 ? (
+              {matrixGroups.length === 0 ? (
                 <tr>
                   <td
                     colSpan={4 + weeks.length}
                     className="p-8 text-center text-muted-foreground text-xs"
                   >
-                    Belum ada paket kerja yang ditambahkan ke proyek ini.
+                    Belum ada data jadwal untuk proyek ini.
                   </td>
                 </tr>
               ) : (
-                groupedPackages.map((group, groupIdx) => (
-                  <React.Fragment key={group.category}>
-                    {/* Header Kategori (Grup Utama: 1. Material, 2. Jasa, dll) */}
+                matrixGroups.map((group) => (
+                  <React.Fragment key={group.id}>
+                    {/* Header Kategori (Grup Utama: 1. Administrasi AFCE, 2. Material, dll) */}
                     <tr className="bg-muted/40 font-bold text-foreground">
                       <td
                         colSpan={4 + weeks.length}
@@ -410,68 +583,78 @@ export function ProjectMatrixGanttChart({
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-primary font-bold">
-                            {groupIdx + 1}. {group.label}
+                            {group.groupIndex}. {group.label}
                           </span>
-                          <span className="text-[10px] font-normal text-muted-foreground">
-                            ({group.items.length} paket)
-                          </span>
+                          {group.badgeCount !== undefined && (
+                            <span className="text-[10px] font-normal text-muted-foreground">
+                              ({group.badgeCount} paket)
+                            </span>
+                          )}
+                          {group.isAfceGroup && (
+                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-xs border border-emerald-300">
+                              Gerbang Persetujuan Proyek
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
 
-                    {/* Baris Tiap Paket Kerja */}
-                    {group.items.map((pkg) => (
+                    {/* Baris Tiap Item Pekerjaan */}
+                    {group.items.map((item) => (
                       <tr
-                        key={pkg.id}
+                        key={item.id}
                         className="hover:bg-muted/20 transition-colors"
                       >
                         {/* Kolom No: a, b, c, ... */}
                         <td className="px-2 py-1 text-center font-medium text-muted-foreground border-r border-border sticky left-0 z-20 bg-background">
-                          {pkg.itemIndex}
+                          {item.itemIndex}
                         </td>
 
                         {/* Kolom Job Item */}
                         <td
-                          className="px-3 py-1 text-left font-normal truncate max-w-[280px] border-r border-border sticky left-12 z-20 bg-background"
-                          title={pkg.packageName}
+                          className="px-3 py-1 text-left font-normal truncate max-w-[300px] border-r border-border sticky left-12 z-20 bg-background"
+                          title={item.packageName}
                         >
-                          <span className="truncate block font-medium">
-                            {pkg.packageName}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="truncate block font-medium">
+                              {item.packageName}
+                            </span>
+                            {item.subLabel ? (
+                              <span className="text-[10px] text-muted-foreground truncate block">
+                                {item.subLabel}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
 
                         {/* Kolom Plan Start */}
-                        <td className="px-1.5 py-1 text-center text-[10px] text-muted-foreground border-r border-border sticky left-[calc(3rem+220px)] md:left-[calc(3rem+280px)] z-20 bg-background whitespace-nowrap">
-                          {formatShortDate(pkg.planStartDate)}
+                        <td className="px-1.5 py-1 text-center text-[10px] text-muted-foreground border-r border-border sticky left-[calc(3rem+240px)] md:left-[calc(3rem+300px)] z-20 bg-background whitespace-nowrap">
+                          {formatShortDate(item.planStartDate)}
                         </td>
 
                         {/* Kolom Plan End */}
-                        <td className="px-1.5 py-1 text-center text-[10px] text-muted-foreground border-r border-border sticky left-[calc(3rem+220px+4rem)] md:left-[calc(3rem+280px+4rem)] z-20 bg-background whitespace-nowrap">
-                          {formatShortDate(pkg.planEndDate)}
+                        <td className="px-1.5 py-1 text-center text-[10px] text-muted-foreground border-r border-border sticky left-[calc(3rem+240px+4rem)] md:left-[calc(3rem+300px+4rem)] z-20 bg-background whitespace-nowrap">
+                          {formatShortDate(item.planEndDate)}
                         </td>
 
                         {/* Sel-Sel Mingguan */}
                         {weeks.map((week) => {
-                          const cell = evaluateCell(pkg, week);
+                          const cell = item.evaluateCell(week);
                           const isCutoff = week.index === currentWeekIndex;
 
-                          // Tentukan kelas warna latar sel
                           let cellBgClass = "bg-transparent";
                           let cellTextClass = "text-foreground";
 
                           if (cell.styleType === "PLAN") {
-                            // Abu-abu
                             cellBgClass =
                               "bg-slate-300 dark:bg-slate-600/80 hover:bg-slate-400/80";
                             cellTextClass =
                               "text-slate-900 dark:text-slate-100 font-semibold";
                           } else if (cell.styleType === "REVISED") {
-                            // Kuning
                             cellBgClass =
                               "bg-[#facc15] dark:bg-yellow-500 hover:bg-yellow-400";
                             cellTextClass = "text-yellow-950 font-bold";
                           } else if (cell.styleType === "THIS_WEEK_REVISED") {
-                            // Oranye
                             cellBgClass =
                               "bg-[#f59e0b] dark:bg-amber-500 hover:bg-amber-400";
                             cellTextClass = "text-amber-950 font-bold";
@@ -509,7 +692,7 @@ export function ProjectMatrixGanttChart({
                                     className="text-xs max-w-xs"
                                   >
                                     <p className="font-semibold">
-                                      {pkg.packageName}
+                                      {item.packageName}
                                     </p>
                                     <p className="text-[11px] text-muted-foreground">
                                       {week.label} (
