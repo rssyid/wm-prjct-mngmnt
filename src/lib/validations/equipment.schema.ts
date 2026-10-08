@@ -18,16 +18,31 @@ export const equipmentLogSchema = z
     unitCode: z.string().trim().min(1, "Kode unit wajib diisi"),
     equipmentType: z.string().trim().min(1, "Jenis alat wajib diisi"),
     ownership: z.nativeEnum(EquipmentOwnership).default(EquipmentOwnership.OWNED),
-    hmStart: z.coerce.number().min(0, "HM Awal minimal 0"),
-    hmEnd: z.coerce.number().min(0, "HM Akhir minimal 0"),
+    hmStart: z.coerce.number().min(0, "HM Awal minimal 0").optional().nullable(),
+    hmEnd: z.coerce.number().min(0, "HM Akhir minimal 0").optional().nullable(),
     fuelLiters: z.coerce.number().min(0, "BBM tidak boleh negatif").optional().nullable(),
-    workVolume: z.coerce.number().min(0, "Volume kerja tidak boleh negatif").optional().nullable(),
-    volumeUnit: z.string().trim().optional().nullable(),
+    workVolume: z.coerce
+      .number({ required_error: "Volume kerja wajib diisi" })
+      .min(0.01, "Volume kerja wajib diisi dan lebih dari 0"),
+    volumeUnit: z.string().trim().min(1, "Satuan volume wajib dipilih"),
     workDescription: z.string().trim().optional().nullable(),
   })
-  .refine((data) => data.hmEnd >= data.hmStart, {
-    message: "HM Akhir (hmEnd) harus lebih besar atau sama dengan HM Awal (hmStart)",
-    path: ["hmEnd"],
-  });
+  .refine(
+    (data) => {
+      if (
+        data.hmStart !== undefined &&
+        data.hmStart !== null &&
+        data.hmEnd !== undefined &&
+        data.hmEnd !== null
+      ) {
+        return data.hmEnd >= data.hmStart;
+      }
+      return true;
+    },
+    {
+      message: "HM Akhir (hmEnd) harus lebih besar atau sama dengan HM Awal (hmStart)",
+      path: ["hmEnd"],
+    }
+  );
 
 export type EquipmentLogInput = z.infer<typeof equipmentLogSchema>;

@@ -21,13 +21,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate } from "@/lib/utils";
-import { EquipmentOwnership } from "@prisma/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { cn, formatDate } from "@/lib/utils";
+import { EquipmentOwnership, PackageCategory } from "@prisma/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   AlertCircle,
   Edit,
+  Gauge,
+  Layers,
   Lock,
   Plus,
   Trash2,
@@ -53,11 +55,20 @@ export interface EquipmentLogRow {
   workPackage?: { id: string; packageName: string } | null;
 }
 
+export interface WorkPackageOption {
+  id: string;
+  packageName: string;
+  category?: PackageCategory;
+  targetQuantity?: number | null;
+  uom?: string | null;
+  volumeAchieved?: number | null;
+}
+
 interface EquipmentLogTableProps {
   projectId: string;
   isCompleted: boolean;
   logs: EquipmentLogRow[];
-  workPackages: Array<{ id: string; packageName: string }>;
+  workPackages: WorkPackageOption[];
   isLoading?: boolean;
 }
 
@@ -69,6 +80,22 @@ export function EquipmentLogTable({
   isLoading,
 }: EquipmentLogTableProps) {
   const queryClient = useQueryClient();
+
+  // Fetch Master Data UoM untuk dropdown satuan
+  const { data: uomData } = useQuery({
+    queryKey: ["master-uom-list"],
+    queryFn: async () => {
+      const res = await fetch("/api/master?type=uom");
+      if (!res.ok) return [];
+      const json = await res.json();
+      return (json.data || []) as Array<{ id: string; code: string; name: string; isActive: boolean }>;
+    },
+  });
+
+  const uomList = useMemo(() => {
+    if (!Array.isArray(uomData)) return [];
+    return uomData.filter((u) => u.isActive);
+  }, [uomData]);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -85,12 +112,50 @@ export function EquipmentLogTable({
   const [hmEnd, setHmEnd] = useState<string>("");
   const [fuelLiters, setFuelLiters] = useState<string>("");
   const [workVolume, setWorkVolume] = useState<string>("");
-  const [volumeUnit, setVolumeUnit] = useState<string>("m3");
+  const [volumeUnit, setVolumeUnit] = useState<string>("m");
   const [workDescription, setWorkDescription] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Perhitungan preview jam kerja di client
+  // Paket kerja yang sedang dipilih
+  const selectedWp = useMemo(() => {
+    if (!selectedWpId || selectedWpId === "none") return null;
+    return workPackages.find((wp) => wp.id === selectedWpId) || null;
+  }, [selectedWpId, workPackages]);
+
+  // Handler memilih paket kerja: otomatis set satuan sesuai paket
+  const handleSelectWp = (wpId: string) => {
+    setSelectedWpId(wpId);
+    if (wpId !== "none") {
+      const wp = workPackages.find((w) => w.id === wpId);
+      if (wp?.uom) {
+        setVolumeUnit(wp.uom);
+      }
+    }
+  };
+
+  // Statistik Target Rencana vs Akumulasi Realisasi untuk paket terpilih
+  const wpStats = useMemo(() => {
+    if (!selectedWp) return null;
+    const target = selectedWp.targetQuantity || 0;
+    const currentAchieved = selectedWp.volumeAchieved || 0;
+    const remaining = target > 0 ? Math.max(0, Math.round((target - currentAchieved) * 100) / 100) : null;
+    const inputVol = parseFloat(workVolume) || 0;
+    const projectedAchieved = Math.round((currentAchieved + inputVol) * 100) / 100;
+    const projectedRemaining = target > 0 ? Math.max(0, Math.round((target - projectedAchieved) * 100) / 100) : null;
+
+    return {
+      target,
+      uom: selectedWp.uom || volumeUnit || "unit",
+      currentAchieved,
+      remaining,
+      projectedAchieved,
+      projectedRemaining,
+    };
+  }, [selectedWp, workVolume, volumeUnit]);
+
+  // Perhitungan preview jam kerja di client (HM bersifat opsional)
   const calculatedHours = useMemo(() => {
+    if (hmStart.trim() === "" || hmEnd.trim() === "") return 0;
     const start = parseFloat(hmStart);
     const end = parseFloat(hmEnd);
     if (!isNaN(start) && !isNaN(end) && end >= start) {
@@ -100,6 +165,7 @@ export function EquipmentLogTable({
   }, [hmStart, hmEnd]);
 
   const isHmInvalid = useMemo(() => {
+    if (hmStart.trim() === "" || hmEnd.trim() === "") return false;
     const start = parseFloat(hmStart);
     const end = parseFloat(hmEnd);
     return !isNaN(start) && !isNaN(end) && end < start;
@@ -116,7 +182,7 @@ export function EquipmentLogTable({
     setHmEnd("");
     setFuelLiters("");
     setWorkVolume("");
-    setVolumeUnit("m3");
+    setVolumeUnit("m");
     setWorkDescription("");
     setFormError(null);
     setDialogOpen(true);
@@ -133,11 +199,11 @@ export function EquipmentLogTable({
         ? new Date(log.logDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0]
     );
-    setHmStart(String(log.hmStart));
-    setHmEnd(String(log.hmEnd));
+    setHmStart(log.hmStart > 0 || log.hmHours > 0 ? String(log.hmStart) : "");
+    setHmEnd(log.hmEnd > 0 || log.hmHours > 0 ? String(log.hmEnd) : "");
     setFuelLiters(log.fuelLiters ? String(log.fuelLiters) : "");
     setWorkVolume(log.workVolume ? String(log.workVolume) : "");
-    setVolumeUnit(log.volumeUnit || "m3");
+    setVolumeUnit(log.volumeUnit || "m");
     setWorkDescription(log.workDescription || "");
     setFormError(null);
     setDialogOpen(true);
@@ -150,6 +216,15 @@ export function EquipmentLogTable({
       if (isHmInvalid) {
         throw new Error("HM Akhir harus lebih besar atau sama dengan HM Awal");
       }
+      if (!workVolume || parseFloat(workVolume) <= 0) {
+        throw new Error("Volume kerja wajib diisi dan harus lebih dari 0");
+      }
+      if (!volumeUnit.trim()) {
+        throw new Error("Satuan volume wajib dipilih");
+      }
+
+      const startNum = hmStart.trim() !== "" ? Number(hmStart) : null;
+      const endNum = hmEnd.trim() !== "" ? Number(hmEnd) : null;
 
       const payload = {
         workPackageId: selectedWpId === "none" ? null : selectedWpId,
@@ -157,11 +232,11 @@ export function EquipmentLogTable({
         unitCode: unitCode.trim(),
         equipmentType: equipmentType.trim(),
         ownership,
-        hmStart: Number(hmStart),
-        hmEnd: Number(hmEnd),
+        hmStart: startNum,
+        hmEnd: endNum,
         fuelLiters: fuelLiters ? Number(fuelLiters) : null,
-        workVolume: workVolume ? Number(workVolume) : null,
-        volumeUnit: volumeUnit.trim() || null,
+        workVolume: Number(workVolume),
+        volumeUnit: volumeUnit.trim(),
         workDescription: workDescription.trim() || null,
       };
 
@@ -184,6 +259,7 @@ export function EquipmentLogTable({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-equipment", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-packages", projectId] });
       setDialogOpen(false);
     },
     onError: (err: Error) => {
@@ -259,11 +335,13 @@ export function EquipmentLogTable({
         ),
       },
       {
-        id: "hmRange",
-        header: "Rentang HM",
+        id: "volume",
+        header: "Volume Kerja (Output)",
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">
-            {row.original.hmStart} – {row.original.hmEnd}
+          <span className="text-xs font-bold text-foreground">
+            {row.original.workVolume !== null && row.original.workVolume !== undefined
+              ? `${row.original.workVolume} ${row.original.volumeUnit || ""}`
+              : "-"}
           </span>
         ),
       },
@@ -271,8 +349,23 @@ export function EquipmentLogTable({
         accessorKey: "hmHours",
         header: "Jam Kerja (HM)",
         cell: ({ row }) => (
-          <span className="font-mono font-bold text-xs text-primary">
-            {row.original.hmHours} Jam
+          <span className="font-mono text-xs">
+            {row.original.hmHours > 0 ? (
+              <span className="font-bold text-primary">{row.original.hmHours} Jam</span>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </span>
+        ),
+      },
+      {
+        id: "hmRange",
+        header: "Rentang HM",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {row.original.hmStart > 0 || row.original.hmEnd > 0
+              ? `${row.original.hmStart} – ${row.original.hmEnd}`
+              : "-"}
           </span>
         ),
       },
@@ -283,17 +376,6 @@ export function EquipmentLogTable({
           <span className="text-xs text-muted-foreground">
             {row.original.fuelLiters !== null && row.original.fuelLiters !== undefined
               ? `${row.original.fuelLiters} L`
-              : "-"}
-          </span>
-        ),
-      },
-      {
-        id: "volume",
-        header: "Volume Kerja",
-        cell: ({ row }) => (
-          <span className="text-xs text-muted-foreground">
-            {row.original.workVolume !== null && row.original.workVolume !== undefined
-              ? `${row.original.workVolume} ${row.original.volumeUnit || ""}`
               : "-"}
           </span>
         ),
@@ -401,7 +483,7 @@ export function EquipmentLogTable({
               {editingLog ? "Edit Log Alat Berat" : "Catat Log Alat Berat Baru"}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              HM Hours dihitung otomatis oleh server berdasarkan HM Awal dan HM Akhir.
+              Pencatatan realisasi operasional unit alat berat berbasis output kerja harian.
             </DialogDescription>
           </DialogHeader>
 
@@ -412,7 +494,71 @@ export function EquipmentLogTable({
             </div>
           )}
 
-          <div className="space-y-3 py-2 text-xs">
+          <div className="space-y-3.5 py-2 text-xs">
+            {/* 1. Paket Kerja Terkait (Sebagai Acuan Output & Target) */}
+            <div className="space-y-1.5 p-3 rounded-lg border border-border bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5 text-primary" />
+                  Paket Kerja Terkait (Referensi Rencana)
+                </Label>
+                {selectedWp && (
+                  <Badge variant="outline" className="text-[10px] bg-background">
+                    {selectedWp.category || "Paket"}
+                  </Badge>
+                )}
+              </div>
+              <Select value={selectedWpId} onValueChange={handleSelectWp}>
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue placeholder="Pilih Paket Kerja (Disarankan)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">-- Tanpa Paket Spesifik (Umum) --</SelectItem>
+                  {workPackages.map((wp) => (
+                    <SelectItem key={wp.id} value={wp.id}>
+                      {wp.packageName} {wp.targetQuantity ? `(${wp.targetQuantity} ${wp.uom || "unit"})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Status Rencana vs Akumulasi Realisasi */}
+              {wpStats && selectedWp && (
+                <div className="rounded-md border border-primary/20 bg-background/90 p-2.5 space-y-2 mt-2">
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="p-1.5 rounded bg-muted/40 border border-border/60">
+                      <div className="text-[10px] text-muted-foreground font-medium">Rencana Target</div>
+                      <div className="font-bold text-foreground">
+                        {wpStats.target > 0 ? `${wpStats.target} ${wpStats.uom}` : "-"}
+                      </div>
+                    </div>
+                    <div className="p-1.5 rounded bg-muted/40 border border-border/60">
+                      <div className="text-[10px] text-muted-foreground font-medium">Akumulasi Realisasi</div>
+                      <div className="font-bold text-primary">
+                        {wpStats.currentAchieved} {wpStats.uom}
+                      </div>
+                    </div>
+                    <div className="p-1.5 rounded bg-muted/40 border border-border/60">
+                      <div className="text-[10px] text-muted-foreground font-medium">Sisa Rencana</div>
+                      <div className={cn("font-bold font-mono", wpStats.remaining !== null && wpStats.remaining <= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400")}>
+                        {wpStats.remaining !== null ? (wpStats.remaining <= 0 ? "0 (Tuntas)" : `${wpStats.remaining} ${wpStats.uom}`) : "-"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {parseFloat(workVolume) > 0 && wpStats.target > 0 && (
+                    <div className="text-[11px] text-muted-foreground pt-1.5 flex items-center justify-between border-t border-border/60">
+                      <span>Proyeksi setelah log ini:</span>
+                      <span className="font-medium text-foreground">
+                        Realisasi menjadi <strong>{wpStats.projectedAchieved} {wpStats.uom}</strong> (Sisa: <strong className="text-primary">{wpStats.projectedRemaining} {wpStats.uom}</strong>)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Informasi Unit & Jenis Alat */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Kode Unit <span className="text-rose-500">*</span></Label>
@@ -420,7 +566,7 @@ export function EquipmentLogTable({
                   value={unitCode}
                   onChange={(e) => setUnitCode(e.target.value)}
                   placeholder="Misal: EXC-01"
-                  className="h-8 text-xs font-mono"
+                  className="h-8 text-xs font-mono font-bold"
                 />
               </div>
 
@@ -442,6 +588,7 @@ export function EquipmentLogTable({
               </div>
             </div>
 
+            {/* 3. Kepemilikan & Tanggal Log */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Kepemilikan</Label>
@@ -471,112 +618,134 @@ export function EquipmentLogTable({
               </div>
             </div>
 
-            {/* Rentang HM */}
-            <div className="grid grid-cols-3 gap-3 p-3 rounded-lg border bg-muted/20">
+            {/* 4. Output Kerja (MANDATORY) & BBM */}
+            <div className="grid grid-cols-3 gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
               <div className="space-y-1">
-                <Label className="text-xs">HM Awal <span className="text-rose-500">*</span></Label>
+                <Label className="text-xs font-semibold text-primary">
+                  Volume Kerja <span className="text-rose-500">*</span>
+                </Label>
                 <Input
                   type="number"
-                  min={0}
-                  step={0.1}
-                  value={hmStart}
-                  onChange={(e) => setHmStart(e.target.value)}
-                  placeholder="0.0"
-                  className="h-8 text-xs font-mono"
+                  min={0.01}
+                  step={0.01}
+                  value={workVolume}
+                  onChange={(e) => setWorkVolume(e.target.value)}
+                  placeholder="Contoh: 50"
+                  className="h-8 text-xs font-bold text-foreground bg-background"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">HM Akhir <span className="text-rose-500">*</span></Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={hmEnd}
-                  onChange={(e) => setHmEnd(e.target.value)}
-                  placeholder="0.0"
-                  className="h-8 text-xs font-mono"
-                />
+                <Label className="text-xs font-semibold text-primary">
+                  Satuan (Master) <span className="text-rose-500">*</span>
+                </Label>
+                <Select value={volumeUnit} onValueChange={setVolumeUnit}>
+                  <SelectTrigger className="h-8 text-xs font-semibold bg-background">
+                    <SelectValue placeholder="Pilih Satuan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedWp?.uom && !uomList.some((u) => u.code.toLowerCase() === selectedWp.uom?.toLowerCase()) && (
+                      <SelectItem value={selectedWp.uom}>
+                        {selectedWp.uom} (Sesuai Paket)
+                      </SelectItem>
+                    )}
+                    {uomList.map((u) => (
+                      <SelectItem key={u.id} value={u.code}>
+                        {u.code} ({u.name})
+                      </SelectItem>
+                    ))}
+                    {uomList.length === 0 && (
+                      <>
+                        <SelectItem value="m">m (Meter)</SelectItem>
+                        <SelectItem value="m3">m3 (Meter Kubik)</SelectItem>
+                        <SelectItem value="ha">ha (Hektar)</SelectItem>
+                        <SelectItem value="unit">unit</SelectItem>
+                        <SelectItem value="jam">jam</SelectItem>
+                        <SelectItem value="titik">titik</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Kalkulasi Jam</Label>
-                <div className="h-8 rounded-md bg-card border px-2.5 flex items-center font-mono font-bold text-xs text-primary">
-                  {calculatedHours} Jam
-                </div>
-              </div>
-            </div>
-
-            {isHmInvalid && (
-              <p className="text-[11px] text-rose-500 font-medium">
-                HM Akhir harus lebih besar atau sama dengan HM Awal.
-              </p>
-            )}
-
-            {/* BBM & Volume */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Konsumsi BBM (Liter)</Label>
+                <Label className="text-xs">BBM Solar (Liter)</Label>
                 <Input
                   type="number"
                   min={0}
                   step={0.1}
                   value={fuelLiters}
                   onChange={(e) => setFuelLiters(e.target.value)}
-                  placeholder="Liter"
-                  className="h-8 text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs">Volume Kerja</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={workVolume}
-                  onChange={(e) => setWorkVolume(e.target.value)}
-                  placeholder="Volume"
-                  className="h-8 text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs">Satuan Volume</Label>
-                <Input
-                  value={volumeUnit}
-                  onChange={(e) => setVolumeUnit(e.target.value)}
-                  placeholder="m3"
-                  className="h-8 text-xs"
+                  placeholder="Opsional"
+                  className="h-8 text-xs bg-background"
                 />
               </div>
             </div>
 
-            {/* Paket Kerja Terkait */}
-            <div className="space-y-1">
-              <Label className="text-xs">Paket Kerja Terkait (Opsional)</Label>
-              <Select value={selectedWpId} onValueChange={setSelectedWpId}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Pilih Paket Kerja (Opsional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">-- Tanpa Paket Spesifik --</SelectItem>
-                  {workPackages.map((wp) => (
-                    <SelectItem key={wp.id} value={wp.id}>
-                      {wp.packageName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* 5. Rentang HM (OPSIONAL) */}
+            <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-medium flex items-center gap-1.5">
+                  <Gauge className="h-3.5 w-3.5" />
+                  Catatan Jam Kerja Alat (HM) — Opsional
+                </span>
+                {calculatedHours > 0 && (
+                  <Badge variant="outline" className="text-[10px] bg-background font-mono text-primary font-bold">
+                    {calculatedHours} Jam
+                  </Badge>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">HM Awal</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={hmStart}
+                    onChange={(e) => setHmStart(e.target.value)}
+                    placeholder="0.0"
+                    className="h-8 text-xs font-mono bg-background"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">HM Akhir</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={hmEnd}
+                    onChange={(e) => setHmEnd(e.target.value)}
+                    placeholder="0.0"
+                    className="h-8 text-xs font-mono bg-background"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Total Jam</Label>
+                  <div className="h-8 rounded-md bg-background border px-2.5 flex items-center font-mono font-bold text-xs text-primary">
+                    {calculatedHours > 0 ? `${calculatedHours} Jam` : "-"}
+                  </div>
+                </div>
+              </div>
+
+              {isHmInvalid && (
+                <p className="text-[11px] text-rose-500 font-medium pt-1">
+                  HM Akhir harus lebih besar atau sama dengan HM Awal.
+                </p>
+              )}
             </div>
 
+            {/* 6. Uraian Pekerjaan */}
             <div className="space-y-1">
               <Label className="text-xs">Keterangan / Lokasi Pekerjaan</Label>
               <Textarea
                 rows={2}
                 value={workDescription}
                 onChange={(e) => setWorkDescription(e.target.value)}
-                placeholder="Misal: Galian saluran inlet blok A01..."
+                placeholder="Misal: Peninggian tanggul saluran inlet blok A01..."
                 className="text-xs"
               />
             </div>
@@ -594,10 +763,17 @@ export function EquipmentLogTable({
             <Button
               size="sm"
               onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || isHmInvalid || !unitCode.trim()}
-              className="h-8 text-xs"
+              disabled={
+                saveMutation.isPending ||
+                isHmInvalid ||
+                !unitCode.trim() ||
+                !workVolume ||
+                parseFloat(workVolume) <= 0 ||
+                !volumeUnit.trim()
+              }
+              className="h-8 text-xs font-medium"
             >
-              {saveMutation.isPending ? "Menyimpan..." : "Simpan Log"}
+              {saveMutation.isPending ? "Menyimpan..." : "Simpan Log Alat"}
             </Button>
           </DialogFooter>
         </DialogContent>

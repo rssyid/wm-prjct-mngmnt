@@ -62,11 +62,21 @@ export async function createEquipmentLog(
       }
     }
 
-    if (data.hmEnd < data.hmStart) {
+    const hasHm =
+      data.hmStart !== undefined &&
+      data.hmStart !== null &&
+      data.hmEnd !== undefined &&
+      data.hmEnd !== null;
+
+    if (hasHm && (data.hmEnd as number) < (data.hmStart as number)) {
       throw new AppError("HM Akhir harus lebih besar atau sama dengan HM Awal", 400);
     }
 
-    const hmHours = Math.round((data.hmEnd - data.hmStart) * 100) / 100;
+    const hmStart = data.hmStart ?? 0;
+    const hmEnd = data.hmEnd ?? 0;
+    const hmHours = hasHm
+      ? Math.round(((data.hmEnd as number) - (data.hmStart as number)) * 100) / 100
+      : 0;
     const logDate = data.logDate ? new Date(data.logDate) : new Date();
 
     const equipmentLog = await tx.heavyEquipmentLog.create({
@@ -77,12 +87,12 @@ export async function createEquipmentLog(
         unitCode: data.unitCode,
         equipmentType: data.equipmentType,
         ownership: data.ownership || EquipmentOwnership.OWNED,
-        hmStart: data.hmStart,
-        hmEnd: data.hmEnd,
+        hmStart,
+        hmEnd,
         hmHours,
         fuelLiters: data.fuelLiters ?? null,
-        workVolume: data.workVolume ?? null,
-        volumeUnit: data.volumeUnit || null,
+        workVolume: data.workVolume,
+        volumeUnit: data.volumeUnit,
         workDescription: data.workDescription || null,
       },
     });
@@ -149,11 +159,21 @@ export async function updateEquipmentLog(
       }
     }
 
-    if (data.hmEnd < data.hmStart) {
+    const hasHm =
+      data.hmStart !== undefined &&
+      data.hmStart !== null &&
+      data.hmEnd !== undefined &&
+      data.hmEnd !== null;
+
+    if (hasHm && (data.hmEnd as number) < (data.hmStart as number)) {
       throw new AppError("HM Akhir harus lebih besar atau sama dengan HM Awal", 400);
     }
 
-    const hmHours = Math.round((data.hmEnd - data.hmStart) * 100) / 100;
+    const hmStart = data.hmStart ?? (hasHm ? 0 : existingLog.hmStart);
+    const hmEnd = data.hmEnd ?? (hasHm ? 0 : existingLog.hmEnd);
+    const hmHours = hasHm
+      ? Math.round(((data.hmEnd as number) - (data.hmStart as number)) * 100) / 100
+      : existingLog.hmHours;
 
     const updatedLog = await tx.heavyEquipmentLog.update({
       where: { id: logId },
@@ -163,12 +183,12 @@ export async function updateEquipmentLog(
         unitCode: data.unitCode,
         equipmentType: data.equipmentType,
         ownership: data.ownership,
-        hmStart: data.hmStart,
-        hmEnd: data.hmEnd,
+        hmStart,
+        hmEnd,
         hmHours,
         fuelLiters: data.fuelLiters ?? null,
-        workVolume: data.workVolume ?? null,
-        volumeUnit: data.volumeUnit || null,
+        workVolume: data.workVolume,
+        volumeUnit: data.volumeUnit,
         workDescription: data.workDescription || null,
       },
     });
