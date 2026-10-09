@@ -9,7 +9,8 @@ export function LogoutButton() {
 
   const handleLogout = async () => {
     setIsLoading(true);
-    await signOut({ callbackUrl: "/login" });
+    await signOut({ redirect: false });
+    window.location.href = "/login";
   };
 
   return (
