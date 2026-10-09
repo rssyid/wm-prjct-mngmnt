@@ -1117,8 +1117,26 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                                 </div>
                                               </div>
                                             ) : (
-                                              <div className="text-[10px] text-muted-foreground italic bg-muted/30 px-1.5 py-0.5 rounded border border-border/40">
-                                                Material Saja (Tanpa Fisik)
+                                              <div className="space-y-1">
+                                                <div className="flex items-center justify-between text-[10px]">
+                                                  <span className="text-muted-foreground">
+                                                    Bobot: {pkg.weightPct}%
+                                                  </span>
+                                                  <span className="font-semibold text-sky-700 dark:text-sky-400 flex items-center gap-0.5">
+                                                    {pkg.progressPct >= 100 && (
+                                                      <CheckCircle2 className="h-3 w-3 text-sky-600 inline" />
+                                                    )}
+                                                    {pkg.progressPct}% <span className="text-[9px] font-normal text-muted-foreground">(Material)</span>
+                                                  </span>
+                                                </div>
+                                                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                                  <div
+                                                    className="bg-sky-500 h-1.5 rounded-full"
+                                                    style={{
+                                                      width: `${Math.min(100, pkg.progressPct)}%`,
+                                                    }}
+                                                  />
+                                                </div>
                                               </div>
                                             )}
                                           </div>
