@@ -6,7 +6,7 @@ import {
 } from "@/lib/validations/project.schema";
 import { requireRole, requireSession } from "@/server/auth-guard";
 import { createProject } from "@/server/services/project.service";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma, ProjectStatus, Role } from "@prisma/client";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,11 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.ProjectWhereInput = {
       deletedAt: null,
-      ...(query.status ? { status: query.status } : {}),
+      ...(query.status
+        ? query.status === "ACTIVE"
+          ? { status: { notIn: [ProjectStatus.COMPLETED, ProjectStatus.CANCELLED] } }
+          : { status: query.status }
+        : {}),
       ...(query.statusIndicator ? { statusIndicator: query.statusIndicator } : {}),
       ...(query.companyId ? { companyId: query.companyId } : {}),
     };

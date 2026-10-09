@@ -70,6 +70,7 @@ interface DashboardStatsData {
     totalPackages: number;
     outstandingPackagesCount: number;
     unpaidPackagesCount: number;
+    undeliveredPackagesCount?: number;
     packagesByStatus: Record<string, number>;
   };
   rejectedArCount: number;
@@ -217,153 +218,188 @@ export function DashboardClient({ user }: DashboardClientProps) {
         <DashboardSkeleton />
       ) : (
         <>
-          {/* Baris 1: Kartu KPI EWS & Portofolio Utama */}
+          {/* Baris 1: Kartu KPI EWS & Portofolio Utama (Seluruh Kartu Clickable) */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Total Proyek Aktif */}
-            <Card className="border-border shadow-xs hover:border-border/80 transition-colors">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Proyek Aktif
-                </CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                  <FolderKanban className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-extrabold tracking-tight tabular-nums text-foreground">
-                  {stats?.activeProjectsCount ?? 0}
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
-                  <span>Total portofolio:</span>
-                  <span className="font-medium tabular-nums text-foreground">
-                    {stats?.totalProjects ?? 0} proyek
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <Link
+              href="/projects?status=ACTIVE"
+              className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <Card className="h-full border-border shadow-xs hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+                    Proyek Aktif
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <FolderKanban className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-extrabold tracking-tight tabular-nums text-foreground">
+                    {stats?.activeProjectsCount ?? 0}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                    <span>Total portofolio:</span>
+                    <span className="font-medium tabular-nums text-foreground">
+                      {stats?.totalProjects ?? 0} proyek
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
             {/* EWS: Terlambat (DELAYED) */}
-            <Card className="border-rose-200/80 bg-rose-50/30 dark:border-rose-900/50 dark:bg-rose-950/20 shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">
-                  Terlambat (DELAYED)
-                </CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 flex items-center justify-center text-rose-600 dark:text-rose-300">
-                  <AlertOctagon className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-extrabold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
-                  {stats?.delayedProjectsCount ?? 0}
-                </div>
-                <p className="text-xs text-rose-700/80 dark:text-rose-400/80 mt-2">
-                  Target lewat atau deviasi &gt; 25 poin
-                </p>
-              </CardContent>
-            </Card>
+            <Link
+              href="/projects?indicator=DELAYED"
+              className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+            >
+              <Card className="h-full border-rose-200/80 bg-rose-50/30 dark:border-rose-900/50 dark:bg-rose-950/20 shadow-xs hover:border-rose-400 hover:shadow-md transition-all cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">
+                    Terlambat (DELAYED)
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 flex items-center justify-center text-rose-600 dark:text-rose-300 group-hover:scale-110 transition-transform">
+                    <AlertOctagon className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-extrabold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
+                    {stats?.delayedProjectsCount ?? 0}
+                  </div>
+                  <p className="text-xs text-rose-700/80 dark:text-rose-400/80 mt-2">
+                    Lewat batas waktu atau tertinggal &gt; 25% dari rencana
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
 
             {/* EWS: Beresiko (AT_RISK) */}
-            <Card className="border-amber-200/80 bg-amber-50/30 dark:border-amber-900/50 dark:bg-amber-950/20 shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                  Berisiko (AT_RISK)
-                </CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-300">
-                  <AlertTriangle className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-extrabold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
-                  {stats?.atRiskProjectsCount ?? 0}
-                </div>
-                <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-2">
-                  Deviasi progres &gt; 10 poin
-                </p>
-              </CardContent>
-            </Card>
+            <Link
+              href="/projects?indicator=AT_RISK"
+              className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            >
+              <Card className="h-full border-amber-200/80 bg-amber-50/30 dark:border-amber-900/50 dark:bg-amber-950/20 shadow-xs hover:border-amber-400 hover:shadow-md transition-all cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                    Berisiko (AT_RISK)
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-300 group-hover:scale-110 transition-transform">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-extrabold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
+                    {stats?.atRiskProjectsCount ?? 0}
+                  </div>
+                  <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-2">
+                    Progres tertinggal 10% – 25% dari jadwal rencana
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
 
             {/* Sesuai Jadwal (ON_TRACK) */}
-            <Card className="border-emerald-200/80 bg-emerald-50/30 dark:border-emerald-900/50 dark:bg-emerald-950/20 shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                  Sesuai Jadwal
-                </CardTitle>
-                <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center text-emerald-600 dark:text-emerald-300">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-extrabold tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">
-                  {stats?.onTrackProjectsCount ?? 0}
-                </div>
-                <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-2">
-                  Deviasi $\le$ 10 poin terhadap kalender kerja
-                </p>
-              </CardContent>
-            </Card>
+            <Link
+              href="/projects?indicator=ON_TRACK"
+              className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <Card className="h-full border-emerald-200/80 bg-emerald-50/30 dark:border-emerald-900/50 dark:bg-emerald-950/20 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    Sesuai Jadwal
+                  </CardTitle>
+                  <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center text-emerald-600 dark:text-emerald-300 group-hover:scale-110 transition-transform">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-extrabold tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">
+                    {stats?.onTrackProjectsCount ?? 0}
+                  </div>
+                  <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-2">
+                    Tepat waktu (selisih progres &le; 10% dari rencana target)
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
-          {/* Baris 2: Kartu KPI Pengadaan & Approval AR */}
+          {/* Baris 2: Kartu KPI Pengadaan & Approval AR (Seluruh Kartu Clickable) */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Pengadaan Outstanding */}
-            <Card className="border-border shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Paket Pengadaan Outstanding
-                </CardTitle>
-                <PackageCheck className="h-4 w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums text-foreground">
-                  {stats?.procurementSummary?.outstandingPackagesCount ?? 0}
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
-                  <span>Belum Lunas:</span>
-                  <span className="font-medium tabular-nums text-foreground">
-                    {stats?.procurementSummary?.unpaidPackagesCount ?? 0} paket
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <Link
+              href="/reports?tab=progress"
+              className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            >
+              <Card className="h-full border-border shadow-xs hover:border-purple-400 hover:shadow-md transition-all cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+                    Paket Pengadaan Outstanding
+                  </CardTitle>
+                  <PackageCheck className="h-4 w-4 text-purple-500 group-hover:scale-110 transition-transform" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold tabular-nums text-foreground">
+                    {stats?.procurementSummary?.outstandingPackagesCount ?? 0}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                    <span>Belum Lunas:</span>
+                    <span className="font-medium tabular-nums text-foreground">
+                      {stats?.procurementSummary?.unpaidPackagesCount ?? 0} paket
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
             {/* Menunggu Approval AR */}
-            <Card className="border-border shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Menunggu Persetujuan AR
-                </CardTitle>
-                <Clock className="h-4 w-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums text-foreground">
-                  {stats?.waitingApprovalCount ?? 0}
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
-                  <span>AR Ditolak (Revisi):</span>
-                  <span className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
-                    {stats?.rejectedArCount ?? 0} berkas
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <Link
+              href="/projects?status=WAITING_AFCE_AR"
+              className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            >
+              <Card className="h-full border-border shadow-xs hover:border-amber-400 hover:shadow-md transition-all cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+                    Menunggu Persetujuan AR
+                  </CardTitle>
+                  <Clock className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold tabular-nums text-foreground">
+                    {stats?.waitingApprovalCount ?? 0}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                    <span>AR Ditolak (Revisi):</span>
+                    <span className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                      {stats?.rejectedArCount ?? 0} berkas
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
             {/* Proyek Tuntas */}
-            <Card className="border-border shadow-xs sm:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Proyek Tuntas (COMPLETED)
-                </CardTitle>
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold tabular-nums text-foreground">
-                  {stats?.completedProjectsCount ?? 0}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  BAST terverifikasi &amp; data terkunci (read-only)
-                </p>
-              </CardContent>
-            </Card>
+            <Link
+              href="/projects?status=COMPLETED"
+              className="group block sm:col-span-2 lg:col-span-1 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <Card className="h-full border-border shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+                    Proyek Tuntas (COMPLETED)
+                  </CardTitle>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold tabular-nums text-foreground">
+                    {stats?.completedProjectsCount ?? 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    BAST terverifikasi &amp; data tersimpan aman (read-only)
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Seksi EWS: Daftar Proyek Membutuhkan Perhatian Segera */}
@@ -377,12 +413,12 @@ export function DashboardClient({ user }: DashboardClientProps) {
                   </CardTitle>
                 </div>
                 <CardDescription className="text-xs mt-1">
-                  Daftar proyek berstatus DELAYED atau AT_RISK berdasarkan kalkulasi hari kerja kalender minus libur nasional &amp; Minggu.
+                  Daftar proyek yang terlambat atau berisiko tertinggal dari jadwal kerja perkebunan (kalkulasi hari kerja aktif).
                 </CardDescription>
               </div>
 
               <Button variant="ghost" size="sm" asChild className="text-xs h-8 gap-1">
-                <Link href="/projects?statusIndicator=DELAYED">
+                <Link href="/projects?indicator=DELAYED">
                   <span>Lihat Semua di Daftar Proyek</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
@@ -399,7 +435,7 @@ export function DashboardClient({ user }: DashboardClientProps) {
                     Semua Proyek Sesuai Jadwal
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                    Saat ini tidak ada proyek aktif yang mengalami keterlambatan kritis (DELAYED) atau berisiko tinggi (AT_RISK).
+                    Saat ini seluruh proyek berjalan lancar dan tidak ada proyek aktif yang mengalami keterlambatan kritis (DELAYED) atau berisiko tinggi (AT_RISK).
                   </p>
                 </div>
               ) : (
@@ -517,10 +553,11 @@ export function DashboardClient({ user }: DashboardClientProps) {
             </CardContent>
           </Card>
 
-          {/* Timeline Portofolio Proyek Aktif */}
+          {/* Timeline Portofolio Proyek (Aktif & Selesai) */}
           <PortfolioGanttChart
-            title="Timeline Portofolio Proyek Aktif"
-            description="Jadwal pelaksanaan seluruh proyek dalam satu garis waktu komprehensif."
+            title="Timeline Portofolio Proyek (Aktif & Selesai)"
+            description="Jadwal dan riwayat pelaksanaan seluruh proyek dalam satu garis waktu komprehensif."
+            defaultStatusFilter="ALL"
           />
 
           {/* Distribusi Proyek Berdasarkan Tahapan Status */}

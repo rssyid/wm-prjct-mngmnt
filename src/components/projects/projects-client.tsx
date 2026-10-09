@@ -119,6 +119,17 @@ export function ProjectsClient({ userRole }: ProjectsClientProps) {
   // Local state untuk search debounce 300 ms
   const [searchInput, setSearchInput] = useState(search);
 
+  // Sync legacy query param ?statusIndicator jika ada
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const legacyIndicator = urlParams.get("statusIndicator");
+      if (legacyIndicator && (!statusIndicator || statusIndicator === "ALL")) {
+        setStatusIndicator(legacyIndicator);
+      }
+    }
+  }, [setStatusIndicator, statusIndicator]);
+
   useEffect(() => {
     const handler = setTimeout(() => {
       if (searchInput !== search) {
@@ -428,6 +439,7 @@ export function ProjectsClient({ userRole }: ProjectsClientProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Semua Status</SelectItem>
+              <SelectItem value="ACTIVE">Proyek Aktif (Berjalan)</SelectItem>
               {Object.keys(PROJECT_STATUS_CONFIG).map((st) => (
                 <SelectItem key={st} value={st}>
                   {PROJECT_STATUS_CONFIG[st as ProjectStatus].label}

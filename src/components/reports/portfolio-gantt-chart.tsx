@@ -47,17 +47,21 @@ interface PortfolioGanttChartProps {
   title?: string;
   description?: string;
   className?: string;
+  defaultStatusFilter?: "ALL" | "ACTIVE" | "COMPLETED";
 }
 
 export function PortfolioGanttChart({
   initialProjects,
   title = "Timeline Portofolio Proyek",
-  description = "Visualisasi jadwal pelaksanaan seluruh proyek aktif dalam satu garis waktu horizontal.",
+  description = "Visualisasi jadwal pelaksanaan seluruh proyek (aktif maupun selesai) dalam satu garis waktu horizontal.",
   className,
+  defaultStatusFilter = "ALL",
 }: PortfolioGanttChartProps) {
   const [search, setSearch] = useState("");
   const [selectedIndicator, setSelectedIndicator] = useState<string>("ALL");
-  const [activeOnly, setActiveOnly] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "COMPLETED">(
+    defaultStatusFilter
+  );
 
   // Fetch data proyek jika tidak disediakan via props
   const { data: fetchedData, isLoading } = useQuery({
@@ -83,8 +87,14 @@ export function PortfolioGanttChart({
   // 1. Filter Proyek
   const filteredProjects = useMemo(() => {
     return rawProjects.filter((p) => {
-      // Filter status aktif
-      if (activeOnly && (p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.CANCELLED)) {
+      // Filter status proyek
+      if (
+        statusFilter === "ACTIVE" &&
+        (p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.CANCELLED)
+      ) {
+        return false;
+      }
+      if (statusFilter === "COMPLETED" && p.status !== ProjectStatus.COMPLETED) {
         return false;
       }
       // Filter status indicator
@@ -102,7 +112,7 @@ export function PortfolioGanttChart({
       }
       return true;
     });
-  }, [rawProjects, activeOnly, selectedIndicator, search]);
+  }, [rawProjects, statusFilter, selectedIndicator, search]);
 
   // 2. Memoize Boundaries & Scale Timeline (Desktop)
   const { minDate, totalDays, timeTicks, todayOffsetPct } = useMemo(() => {
@@ -242,6 +252,35 @@ export function PortfolioGanttChart({
               />
             </div>
 
+            {/* Filter Status Proyek: Semua / Hanya Aktif / Sudah Selesai */}
+            <div className="flex items-center rounded-md border border-border bg-background p-0.5">
+              <Button
+                size="sm"
+                variant={statusFilter === "ALL" ? "secondary" : "ghost"}
+                onClick={() => setStatusFilter("ALL")}
+                className="h-7 px-2.5 text-[11px] font-medium"
+              >
+                Semua Status
+              </Button>
+              <Button
+                size="sm"
+                variant={statusFilter === "ACTIVE" ? "secondary" : "ghost"}
+                onClick={() => setStatusFilter("ACTIVE")}
+                className="h-7 px-2.5 text-[11px] font-medium"
+              >
+                Hanya Aktif
+              </Button>
+              <Button
+                size="sm"
+                variant={statusFilter === "COMPLETED" ? "secondary" : "ghost"}
+                onClick={() => setStatusFilter("COMPLETED")}
+                className="h-7 px-2.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400"
+              >
+                Sudah Selesai
+              </Button>
+            </div>
+
+            {/* Filter SLA / Indikator EWS */}
             <div className="flex items-center rounded-md border border-border bg-background p-0.5">
               <Button
                 size="sm"
@@ -249,7 +288,7 @@ export function PortfolioGanttChart({
                 onClick={() => setSelectedIndicator("ALL")}
                 className="h-7 px-2 text-[11px]"
               >
-                Semua
+                Semua SLA
               </Button>
               <Button
                 size="sm"
@@ -275,16 +314,15 @@ export function PortfolioGanttChart({
               >
                 Delayed
               </Button>
+              <Button
+                size="sm"
+                variant={selectedIndicator === StatusIndicator.COMPLETED ? "secondary" : "ghost"}
+                onClick={() => setSelectedIndicator(StatusIndicator.COMPLETED)}
+                className="h-7 px-2 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold"
+              >
+                Tuntas
+              </Button>
             </div>
-
-            <Button
-              size="sm"
-              variant={activeOnly ? "default" : "outline"}
-              onClick={() => setActiveOnly(!activeOnly)}
-              className="h-8 text-xs font-medium"
-            >
-              {activeOnly ? "Hanya Aktif" : "Semua Status"}
-            </Button>
           </div>
         </div>
 

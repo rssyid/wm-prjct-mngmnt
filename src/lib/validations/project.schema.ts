@@ -97,7 +97,7 @@ export const projectQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(10),
   search: z.string().optional(),
-  status: z.nativeEnum(ProjectStatus).optional(),
+  status: z.union([z.nativeEnum(ProjectStatus), z.literal("ACTIVE")]).optional(),
   statusIndicator: z.nativeEnum(StatusIndicator).optional(),
   companyId: z.string().optional(),
   sort: z.string().default("-updatedAt"),

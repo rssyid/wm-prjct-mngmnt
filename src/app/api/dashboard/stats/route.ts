@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       packageStatusGroups,
       outstandingPackagesCount,
       unpaidPackagesCount,
+      undeliveredPackagesCount,
       rejectedArCount,
       waitingApprovalCount,
       holidaysThisYearCount,
@@ -163,13 +164,19 @@ export async function GET(request: NextRequest) {
         _count: { id: true },
       }),
 
-      // 10. Paket outstanding (belum COMPLETED atau CANCELLED)
+      // 10. Paket outstanding (belum tiba lengkap ATAU belum lunas, pada proyek yang tidak CANCELLED)
       prisma.workPackage.count({
         where: {
           ...basePackageWhere,
-          status: {
-            notIn: [PackageStatus.COMPLETED, PackageStatus.CANCELLED],
+          status: { not: PackageStatus.CANCELLED },
+          project: {
+            ...(basePackageWhere.project || {}),
+            status: { not: ProjectStatus.CANCELLED },
           },
+          OR: [
+            { paymentStatus: { not: PaymentStatus.LUNAS } },
+            { status: { notIn: [PackageStatus.DELIVERED, PackageStatus.COMPLETED] } },
+          ],
         },
       }),
 
@@ -177,7 +184,30 @@ export async function GET(request: NextRequest) {
       prisma.workPackage.count({
         where: {
           ...basePackageWhere,
+          status: { not: PackageStatus.CANCELLED },
+          project: {
+            ...(basePackageWhere.project || {}),
+            status: { not: ProjectStatus.CANCELLED },
+          },
           paymentStatus: { not: PaymentStatus.LUNAS },
+        },
+      }),
+
+      // 11b. Paket belum tiba lengkap (belum DELIVERED / COMPLETED)
+      prisma.workPackage.count({
+        where: {
+          ...basePackageWhere,
+          status: {
+            notIn: [
+              PackageStatus.DELIVERED,
+              PackageStatus.COMPLETED,
+              PackageStatus.CANCELLED,
+            ],
+          },
+          project: {
+            ...(basePackageWhere.project || {}),
+            status: { not: ProjectStatus.CANCELLED },
+          },
         },
       }),
 
@@ -265,6 +295,7 @@ export async function GET(request: NextRequest) {
         totalPackages,
         outstandingPackagesCount,
         unpaidPackagesCount,
+        undeliveredPackagesCount,
         packagesByStatus,
       },
       // Kompatibilitas single source of truth untuk Navbar & Dashboard
