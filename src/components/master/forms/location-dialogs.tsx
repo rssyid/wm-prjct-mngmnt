@@ -206,6 +206,9 @@ interface CompanyDialogProps {
     id: string;
     code: string;
     name: string;
+    alias?: string | null;
+    ops?: string | null;
+    order?: number;
     regionId?: string | null;
     isActive: boolean;
   } | null;
@@ -233,6 +236,9 @@ export function CompanyDialog({
     defaultValues: {
       code: "",
       name: "",
+      alias: "",
+      ops: "",
+      order: 0,
       regionId: null,
       isActive: true,
     },
@@ -243,6 +249,9 @@ export function CompanyDialog({
       reset({
         code: initialData.code,
         name: initialData.name,
+        alias: initialData.alias || "",
+        ops: initialData.ops || "",
+        order: initialData.order ?? 0,
         regionId: initialData.regionId || null,
         isActive: initialData.isActive,
       });
@@ -250,6 +259,9 @@ export function CompanyDialog({
       reset({
         code: "",
         name: "",
+        alias: "",
+        ops: "",
+        order: 0,
         regionId: null,
         isActive: true,
       });
@@ -280,56 +292,58 @@ export function CompanyDialog({
               {initialData ? "Ubah Perusahaan (PT)" : "Tambah Perusahaan Baru (PT)"}
             </DialogTitle>
             <DialogDescription>
-              Kode perusahaan dipakai sebagai penomoran kode proyek (cth: WM-CMP01-2026-0001).
+              Kode perusahaan dipakai sebagai penomoran kode proyek (cth: WM-THIP-2026-0001).
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 py-4">
             {errorMsg && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">
                 {errorMsg}
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Region Induk</Label>
-              <Controller
-                control={control}
-                name="regionId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || "none"}
-                    onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-                  >
-                    <SelectTrigger className="text-xs">
-                      <SelectValue placeholder="Pilih Region (Opsional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">-- Tanpa Region --</SelectItem>
-                      {regionList.map((r) => (
-                        <SelectItem key={r.id} value={r.id} className="text-xs">
-                          {r.name} ({r.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cmp-code" className="text-xs">
+                  Kode Perusahaan <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="cmp-code"
+                  placeholder="cth: THIP, JJP"
+                  className="uppercase font-mono text-xs"
+                  {...register("code")}
+                />
+                {errors.code && (
+                  <p className="text-xs text-destructive">{errors.code.message}</p>
                 )}
-              />
-            </div>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="cmp-code" className="text-xs">
-                Kode Perusahaan <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="cmp-code"
-                placeholder="cth: CMP01"
-                className="uppercase font-mono text-xs"
-                {...register("code")}
-              />
-              {errors.code && (
-                <p className="text-xs text-destructive">{errors.code.message}</p>
-              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="cmp-ops" className="text-xs">
+                  Wilayah (Ops)
+                </Label>
+                <Controller
+                  control={control}
+                  name="ops"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Pilih Ops" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Tanpa Ops --</SelectItem>
+                        <SelectItem value="SUMATERA">SUMATERA</SelectItem>
+                        <SelectItem value="KALBAR">KALBAR</SelectItem>
+                        <SelectItem value="WILTIM">WILTIM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -338,13 +352,54 @@ export function CompanyDialog({
               </Label>
               <Input
                 id="cmp-name"
-                placeholder="cth: PT Sawit Jaya Makmur"
+                placeholder="cth: TH Indo Plantation"
                 className="text-xs"
                 {...register("name")}
               />
               {errors.name && (
                 <p className="text-xs text-destructive">{errors.name.message}</p>
               )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Region Induk</Label>
+                <Controller
+                  control={control}
+                  name="regionId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Pilih Region" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Tanpa Region --</SelectItem>
+                        {regionList.map((r) => (
+                          <SelectItem key={r.id} value={r.id} className="text-xs">
+                            {r.name} ({r.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="cmp-order" className="text-xs">
+                  Nomor Urut (Order)
+                </Label>
+                <Input
+                  id="cmp-order"
+                  type="number"
+                  placeholder="0"
+                  className="text-xs"
+                  {...register("order")}
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-between border rounded-md p-3">
@@ -401,7 +456,12 @@ interface EstateDialogProps {
     companyId: string;
     code: string;
     name: string;
+    ops?: string | null;
     region?: string | null;
+    group?: string | null;
+    estateNew?: string | null;
+    legacyCode?: string | null;
+    order?: number;
     isActive: boolean;
   } | null;
   companyList: Array<{ id: string; code: string; name: string }>;
@@ -431,7 +491,12 @@ export function EstateDialog({
       companyId: defaultCompanyId || "",
       code: "",
       name: "",
+      ops: "",
       region: "",
+      group: "",
+      estateNew: "",
+      legacyCode: "",
+      order: 0,
       isActive: true,
     },
   });
@@ -442,7 +507,12 @@ export function EstateDialog({
         companyId: initialData.companyId,
         code: initialData.code,
         name: initialData.name,
+        ops: initialData.ops || "",
         region: initialData.region || "",
+        group: initialData.group || "",
+        estateNew: initialData.estateNew || "",
+        legacyCode: initialData.legacyCode || "",
+        order: initialData.order ?? 0,
         isActive: initialData.isActive,
       });
     } else {
@@ -450,7 +520,12 @@ export function EstateDialog({
         companyId: defaultCompanyId || "",
         code: "",
         name: "",
+        ops: "",
         region: "",
+        group: "",
+        estateNew: "",
+        legacyCode: "",
+        order: 0,
         isActive: true,
       });
     }
@@ -473,18 +548,18 @@ export function EstateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[480px]">
         <form onSubmit={handleSubmit(onFormSubmit)}>
           <DialogHeader>
             <DialogTitle>
               {initialData ? "Ubah Estate / Kebun" : "Tambah Estate / Kebun"}
             </DialogTitle>
             <DialogDescription>
-              Estate/Kebun berada di bawah naungan satu Perusahaan (PT).
+              Estate/Kebun berada di bawah naungan Perusahaan (PT) dan nomor urut Order (1–63).
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 py-4 max-h-[70vh] overflow-y-auto px-1">
             {errorMsg && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">
                 {errorMsg}
@@ -518,19 +593,34 @@ export function EstateDialog({
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="est-code" className="text-xs">
-                Kode Estate <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="est-code"
-                placeholder="cth: EST-01"
-                className="uppercase font-mono text-xs"
-                {...register("code")}
-              />
-              {errors.code && (
-                <p className="text-xs text-destructive">{errors.code.message}</p>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="est-code" className="text-xs">
+                  Kode Estate <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="est-code"
+                  placeholder="cth: MER, JJP1"
+                  className="uppercase font-mono text-xs"
+                  {...register("code")}
+                />
+                {errors.code && (
+                  <p className="text-xs text-destructive">{errors.code.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="est-order" className="text-xs">
+                  Nomor Urut (Order 1–63)
+                </Label>
+                <Input
+                  id="est-order"
+                  type="number"
+                  placeholder="1"
+                  className="text-xs"
+                  {...register("order")}
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -539,13 +629,91 @@ export function EstateDialog({
               </Label>
               <Input
                 id="est-name"
-                placeholder="cth: Kebun Sei Mangkei"
+                placeholder="cth: Meranti, Sungai Bangko"
                 className="text-xs"
                 {...register("name")}
               />
               {errors.name && (
                 <p className="text-xs text-destructive">{errors.name.message}</p>
               )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="est-ops" className="text-xs">
+                  Wilayah (Ops)
+                </Label>
+                <Controller
+                  control={control}
+                  name="ops"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Pilih Ops" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Tanpa Ops --</SelectItem>
+                        <SelectItem value="SUMATERA">SUMATERA</SelectItem>
+                        <SelectItem value="KALBAR">KALBAR</SelectItem>
+                        <SelectItem value="WILTIM">WILTIM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="est-region" className="text-xs">
+                  Region
+                </Label>
+                <Input
+                  id="est-region"
+                  placeholder="cth: Region 1, Kalbar A"
+                  className="text-xs"
+                  {...register("region")}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="est-group" className="text-xs">
+                  Grup Kebun
+                </Label>
+                <Input
+                  id="est-group"
+                  placeholder="cth: THIP 1, Kalbar 1"
+                  className="text-xs"
+                  {...register("group")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="est-new" className="text-xs">
+                  Kode Baru (EstateNew)
+                </Label>
+                <Input
+                  id="est-new"
+                  placeholder="cth: THP1"
+                  className="text-xs uppercase font-mono"
+                  {...register("estateNew")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="est-legacy" className="text-xs">
+                  Kode Lama (Legacy)
+                </Label>
+                <Input
+                  id="est-legacy"
+                  placeholder="cth: KSB"
+                  className="text-xs uppercase font-mono"
+                  {...register("legacyCode")}
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-between border rounded-md p-3">

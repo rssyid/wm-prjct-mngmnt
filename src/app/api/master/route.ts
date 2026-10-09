@@ -178,6 +178,7 @@ export async function GET(request: NextRequest) {
                 OR: [
                   { code: { contains: search, mode: "insensitive" } },
                   { name: { contains: search, mode: "insensitive" } },
+                  { ops: { contains: search, mode: "insensitive" } },
                 ],
               }
             : undefined,
@@ -186,28 +187,31 @@ export async function GET(request: NextRequest) {
               select: { companies: true },
             },
           },
-          orderBy: { code: "asc" },
+          orderBy: [{ order: "asc" }, { code: "asc" }],
         });
         return apiSuccess(data);
       }
 
       case "company": {
         const withHierarchy = searchParams.get("include") === "hierarchy";
+        const ops = searchParams.get("ops") || undefined;
         const data = await prisma.company.findMany({
           where: {
             ...(regionId ? { regionId } : {}),
+            ...(ops ? { ops } : {}),
             ...(search
               ? {
                   OR: [
                     { code: { contains: search, mode: "insensitive" } },
                     { name: { contains: search, mode: "insensitive" } },
+                    { alias: { contains: search, mode: "insensitive" } },
                   ],
                 }
               : {}),
           },
           include: {
             region: {
-              select: { id: true, code: true, name: true },
+              select: { id: true, code: true, name: true, ops: true },
             },
             _count: {
               select: {
@@ -219,11 +223,17 @@ export async function GET(request: NextRequest) {
               ? {
                   estates: {
                     where: { isActive: true },
-                    orderBy: { code: "asc" as const },
+                    orderBy: [{ order: "asc" as const }, { code: "asc" as const }],
                     select: {
                       id: true,
                       code: true,
                       name: true,
+                      ops: true,
+                      region: true,
+                      group: true,
+                      estateNew: true,
+                      legacyCode: true,
+                      order: true,
                       blocks: {
                         where: { isActive: true },
                         orderBy: { blockCode: "asc" as const },
@@ -234,27 +244,34 @@ export async function GET(request: NextRequest) {
                 }
               : {}),
           },
-          orderBy: { code: "asc" },
+          orderBy: [{ order: "asc" }, { code: "asc" }],
         });
         return apiSuccess(data);
       }
 
       case "estate": {
+        const ops = searchParams.get("ops") || undefined;
+        const group = searchParams.get("group") || undefined;
         const data = await prisma.estate.findMany({
           where: {
             ...(companyId ? { companyId } : {}),
+            ...(ops ? { ops } : {}),
+            ...(group ? { group } : {}),
             ...(search
               ? {
                   OR: [
                     { code: { contains: search, mode: "insensitive" } },
                     { name: { contains: search, mode: "insensitive" } },
+                    { estateNew: { contains: search, mode: "insensitive" } },
+                    { legacyCode: { contains: search, mode: "insensitive" } },
+                    { group: { contains: search, mode: "insensitive" } },
                   ],
                 }
               : {}),
           },
           include: {
             company: {
-              select: { id: true, code: true, name: true },
+              select: { id: true, code: true, name: true, alias: true, ops: true },
             },
             _count: {
               select: {
@@ -263,7 +280,7 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          orderBy: { code: "asc" },
+          orderBy: [{ order: "asc" }, { code: "asc" }],
         });
         return apiSuccess(data);
       }
@@ -508,6 +525,9 @@ export async function POST(request: NextRequest) {
           data: {
             code: validated.code,
             name: validated.name,
+            alias: validated.alias || null,
+            ops: validated.ops || null,
+            order: validated.order,
             regionId: validated.regionId || null,
             isActive: validated.isActive,
           },
@@ -525,7 +545,12 @@ export async function POST(request: NextRequest) {
             companyId: validated.companyId,
             code: validated.code,
             name: validated.name,
+            ops: validated.ops || null,
             region: validated.region || null,
+            group: validated.group || null,
+            estateNew: validated.estateNew || null,
+            legacyCode: validated.legacyCode || null,
+            order: validated.order,
             isActive: validated.isActive,
           },
           include: {
@@ -693,6 +718,9 @@ export async function PUT(request: NextRequest) {
           data: {
             code: validated.code,
             name: validated.name,
+            alias: validated.alias || null,
+            ops: validated.ops || null,
+            order: validated.order,
             regionId: validated.regionId || null,
             isActive: validated.isActive,
           },
@@ -711,7 +739,12 @@ export async function PUT(request: NextRequest) {
             companyId: validated.companyId,
             code: validated.code,
             name: validated.name,
+            ops: validated.ops || null,
             region: validated.region || null,
+            group: validated.group || null,
+            estateNew: validated.estateNew || null,
+            legacyCode: validated.legacyCode || null,
+            order: validated.order,
             isActive: validated.isActive,
           },
           include: {

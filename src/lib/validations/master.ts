@@ -113,9 +113,11 @@ export const regionSchema = z.object({
   code: z
     .string()
     .min(1, "Kode region wajib diisi")
-    .max(20, "Kode region maksimal 20 karakter")
+    .max(30, "Kode region maksimal 30 karakter")
     .transform((v) => v.trim().toUpperCase()),
   name: z.string().min(1, "Nama region wajib diisi").transform((v) => v.trim()),
+  ops: z.string().optional().nullable(),
+  order: z.coerce.number().int().default(0),
   isActive: z.boolean().default(true),
 });
 
@@ -125,9 +127,12 @@ export const companySchema = z.object({
   code: z
     .string()
     .min(1, "Kode perusahaan wajib diisi")
-    .max(20, "Kode perusahaan maksimal 20 karakter")
+    .max(30, "Kode perusahaan maksimal 30 karakter")
     .transform((v) => v.trim().toUpperCase()),
   name: z.string().min(1, "Nama perusahaan wajib diisi").transform((v) => v.trim()),
+  alias: z.string().optional().nullable(),
+  ops: z.string().optional().nullable(),
+  order: z.coerce.number().int().default(0),
   regionId: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
 });
@@ -139,10 +144,15 @@ export const estateSchema = z.object({
   code: z
     .string()
     .min(1, "Kode estate wajib diisi")
-    .max(20, "Kode estate maksimal 20 karakter")
+    .max(30, "Kode estate maksimal 30 karakter")
     .transform((v) => v.trim().toUpperCase()),
   name: z.string().min(1, "Nama estate wajib diisi").transform((v) => v.trim()),
+  ops: z.string().optional().nullable(),
   region: z.string().optional().nullable(),
+  group: z.string().optional().nullable(),
+  estateNew: z.string().optional().nullable(),
+  legacyCode: z.string().optional().nullable(),
+  order: z.coerce.number().int().default(0),
   isActive: z.boolean().default(true),
 });
 

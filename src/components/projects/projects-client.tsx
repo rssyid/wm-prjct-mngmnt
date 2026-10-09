@@ -488,7 +488,7 @@ export function ProjectsClient({ userRole }: ProjectsClientProps) {
               <SelectItem value="ALL">Semua Perusahaan</SelectItem>
               {companies.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
-                  {c.code}
+                  {c.code} — {c.name}
                 </SelectItem>
               ))}
             </SelectContent>

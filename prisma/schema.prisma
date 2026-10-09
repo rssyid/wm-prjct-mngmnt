@@ -158,6 +158,8 @@ model Region {
   id        String   @id @default(cuid())
   code      String   @unique
   name      String
+  ops       String?  // SUMATERA, KALBAR, WILTIM
+  order     Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -169,6 +171,9 @@ model Company {
   id        String   @id @default(cuid())
   code      String   @unique
   name      String
+  alias     String?  // CompanyAlias (misal TH Indo Plantation)
+  ops       String?  // SUMATERA, KALBAR, WILTIM
+  order     Int      @default(0)
   isActive  Boolean  @default(true)
   regionId  String?
   createdAt DateTime @default(now())
@@ -183,20 +188,26 @@ model Company {
 }
 
 model Estate {
-  id        String   @id @default(cuid())
-  companyId String
-  code      String
-  name      String
-  region    String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  companyId  String
+  code       String
+  name       String
+  ops        String?  // SUMATERA, KALBAR, WILTIM
+  region     String?  // Region 1, Kalbar A, dll.
+  group      String?  // THIP 1, Sumatera 1, Kalbar 1, dll.
+  estateNew  String?  // THP1..THP20 atau JJP1
+  legacyCode String?  // KSB, KSR, KDP, dll.
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   blocks   Block[]
   projects Project[]
 
   @@unique([companyId, code])
+  @@index([order])
 }
 
 model Block {

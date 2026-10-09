@@ -82,31 +82,180 @@ async function main() {
     create: { email, name: "Super Admin", password, role: "SUPER_ADMIN" },
   });
 
-  // 2. Lokasi: Region → Company → Estate → Block
-  const region = await prisma.region.upsert({
-    where: { code: "REG01" },
-    update: {},
-    create: { code: "REG01", name: "Sumatera" },
-  });
-  const company = await prisma.company.upsert({
-    where: { code: "CMP01" },
-    update: {},
-    create: { code: "CMP01", name: "PT Contoh Agro Lestari", regionId: region.id },
-  });
-  const estate = await prisma.estate.upsert({
-    where: { companyId_code: { companyId: company.id, code: "EST01" } },
-    update: {},
-    create: { companyId: company.id, code: "EST01", name: "Kebun Sungai Air", region: region.name },
-  });
-  for (const [blockCode, name, plantingYear, areaHectares] of [
-    ["A01", "Blok A01", 2012, 28.5],
-    ["A02", "Blok A02", 2013, 31.2],
-  ]) {
-    await prisma.block.upsert({
-      where: { estateId_blockCode: { estateId: estate.id, blockCode } },
-      update: {},
-      create: { estateId: estate.id, blockCode, name, plantingYear, areaHectares },
+  // 2. Lokasi Riil: 8 Region → 27 Company → 63 Estate (Order 1–63)
+  const { REAL_LOCATIONS } = require("./real-locations");
+
+  const REGION_DEFS = [
+    { code: "REG-SUM-1", name: "Region 1", ops: "SUMATERA", order: 1 },
+    { code: "REG-SUM-2", name: "Region 2", ops: "SUMATERA", order: 2 },
+    { code: "REG-SUM-1-NTHIP", name: "Region 1 Non THIP", ops: "SUMATERA", order: 3 },
+    { code: "REG-SUM-2-NTHIP", name: "Region 2 Non THIP", ops: "SUMATERA", order: 4 },
+    { code: "REG-KB-A", name: "Kalbar A", ops: "KALBAR", order: 5 },
+    { code: "REG-KB-B", name: "Kalbar B", ops: "KALBAR", order: 6 },
+    { code: "REG-KTM", name: "Kaltim", ops: "WILTIM", order: 7 },
+    { code: "REG-PAP", name: "Papua", ops: "WILTIM", order: 8 },
+  ];
+
+  const regionMap = {};
+  for (const r of REGION_DEFS) {
+    const reg = await prisma.region.upsert({
+      where: { code: r.code },
+      update: { name: r.name, ops: r.ops, order: r.order, isActive: true },
+      create: { code: r.code, name: r.name, ops: r.ops, order: r.order, isActive: true },
     });
+    regionMap[r.name] = reg;
+  }
+
+  // 2b. Unique Companies
+  const companyMap = {};
+  const companySeen = new Set();
+  let companyOrder = 1;
+
+  for (const row of REAL_LOCATIONS) {
+    if (!companySeen.has(row.company)) {
+      companySeen.add(row.company);
+      const reg = regionMap[row.region];
+      const comp = await prisma.company.upsert({
+        where: { code: row.company },
+        update: {
+          name: row.companyAlias,
+          alias: row.companyAlias,
+          ops: row.ops,
+          order: companyOrder,
+          regionId: reg ? reg.id : null,
+          isActive: true,
+        },
+        create: {
+          code: row.company,
+          name: row.companyAlias,
+          alias: row.companyAlias,
+          ops: row.ops,
+          order: companyOrder,
+          regionId: reg ? reg.id : null,
+          isActive: true,
+        },
+      });
+      companyMap[row.company] = comp;
+      companyOrder++;
+    }
+  }
+
+  // 2c. 63 Estates
+  let order1Estate = null;
+  for (const row of REAL_LOCATIONS) {
+    const comp = companyMap[row.company];
+    if (!comp) continue;
+
+    // Untuk THIP: pakai kode kolom Estate (MER, RAM, dst)
+    // Untuk Non-THIP: pakai kode kolom EstateNew (JJP1, CRS, BSU1, dst)
+    const estateCode = row.company === "THIP" ? row.estate : row.estateNew;
+    const legacyCode = row.estate;
+
+    const est = await prisma.estate.upsert({
+      where: {
+        companyId_code: {
+          companyId: comp.id,
+          code: estateCode,
+        },
+      },
+      update: {
+        name: row.estateAlias,
+        ops: row.ops,
+        region: row.region,
+        group: row.group,
+        estateNew: row.estateNew,
+        legacyCode,
+        order: row.order,
+        isActive: true,
+      },
+      create: {
+        companyId: comp.id,
+        code: estateCode,
+        name: row.estateAlias,
+        ops: row.ops,
+        region: row.region,
+        group: row.group,
+        estateNew: row.estateNew,
+        legacyCode,
+        order: row.order,
+        isActive: true,
+      },
+    });
+
+    if (row.order === 1) {
+      order1Estate = est;
+    }
+  }
+
+  // 2d. Seed Blocks untuk Estate Order 1 (MER - Meranti)
+  if (order1Estate) {
+    for (const [blockCode, name, plantingYear, areaHectares] of [
+      ["A01", "Blok A01", 2012, 28.5],
+      ["A02", "Blok A02", 2013, 31.2],
+    ]) {
+      await prisma.block.upsert({
+        where: { estateId_blockCode: { estateId: order1Estate.id, blockCode } },
+        update: { name, plantingYear, areaHectares, isActive: true },
+        create: { estateId: order1Estate.id, blockCode, name, plantingYear, areaHectares, isActive: true },
+      });
+    }
+  }
+
+  // 2e. Hubungkan Proyek Aktif Eksisting ke Estate Order 1 (THIP - MER)
+  const thipCompany = companyMap["THIP"];
+  if (thipCompany && order1Estate) {
+    const activeProject = await prisma.project.findFirst({
+      where: { projectCode: "WM-THIP-2026-0001" },
+      select: { id: true },
+    });
+    if (activeProject) {
+      await prisma.project.update({
+        where: { id: activeProject.id },
+        data: {
+          companyId: thipCompany.id,
+          estateId: order1Estate.id,
+        },
+      });
+    }
+
+    // Pastikan ProjectCodeCounter THIP tersinkron
+    await prisma.projectCodeCounter.upsert({
+      where: { companyId_year: { companyId: thipCompany.id, year: 2026 } },
+      update: { lastSeq: 1 },
+      create: { companyId: thipCompany.id, year: 2026, lastSeq: 1 },
+    });
+  }
+
+  // 2f. Hapus Data Dummy Lama (CMP01, EST01, REG01)
+  try {
+    const dummyComp = await prisma.company.findUnique({
+      where: { code: "CMP01" },
+      include: { estates: true, projects: true },
+    });
+    if (dummyComp && dummyComp.projects.length === 0) {
+      for (const est of dummyComp.estates) {
+        await prisma.block.deleteMany({ where: { estateId: est.id } });
+        await prisma.estate.delete({ where: { id: est.id } });
+      }
+      await prisma.projectCodeCounter.deleteMany({ where: { companyId: dummyComp.id } });
+      await prisma.company.delete({ where: { id: dummyComp.id } });
+      console.log("🧹 Data dummy CMP01 dan EST01 berhasil dibersihkan");
+    }
+
+    const dummyReg = await prisma.region.findUnique({
+      where: { code: "REG01" },
+      include: { companies: true },
+    });
+    if (dummyReg && dummyReg.companies.length === 0) {
+      await prisma.region.delete({ where: { id: dummyReg.id } });
+      console.log("🧹 Data dummy REG01 berhasil dibersihkan");
+    }
+
+    await prisma.region.deleteMany({
+      where: { code: "THIP", companies: { none: {} } },
+    });
+  } catch (err) {
+    console.warn("Catatan pembersihan dummy:", err.message);
   }
 
   // 3. Folder category (wajib: Project.folderCategoryId NOT NULL)
@@ -146,7 +295,7 @@ async function main() {
   }
 
   // 7. PIC (tanpa kunci UNIQUE → cek nama dulu)
-  const pic = { name: "Andi Pratama", roleTitle: "WM Field Engineer", companyIds: [company.id] };
+  const pic = { name: "Andi Pratama", roleTitle: "WM Field Engineer", companyIds: thipCompany ? [thipCompany.id] : [] };
   const existingPic = await prisma.picOfficer.findFirst({ where: { name: pic.name }, select: { id: true } });
   if (!existingPic) await prisma.picOfficer.create({ data: pic });
 
