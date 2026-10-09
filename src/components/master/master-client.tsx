@@ -32,6 +32,7 @@ import { ItemExcelImportDialog } from "./forms/item-excel-import-dialog";
 import { StructureTypeDialog, StructureVariantDialog } from "./forms/structure-dialog";
 import { UomDialog } from "./forms/uom-dialog";
 import { VendorDialog } from "./forms/vendor-dialog";
+import { MasterItemTab } from "./master-item-tab";
 import { MasterLocationTab } from "./master-location-tab";
 import { FileSpreadsheet, FileUp, MapPin } from "lucide-react";
 
@@ -128,10 +129,10 @@ export function MasterClient({ userRole }: MasterClientProps) {
   const [editItem, setEditItem] = React.useState<Record<string, unknown> | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<{ type: string; id: string; name: string } | null>(null);
 
-  // TanStack Query Fetcher
+  // TanStack Query Fetcher (for tabs other than location and item)
   const { data: responseData, isLoading } = useQuery<unknown[]>({
     queryKey: ["master", tab, debouncedSearch],
-    enabled: tab !== "location",
+    enabled: tab !== "location" && tab !== "item",
     queryFn: async () => {
       const res = await fetch(`/api/master?type=${tab}&search=${encodeURIComponent(debouncedSearch)}`);
       const json = await res.json();
@@ -222,67 +223,7 @@ export function MasterClient({ userRole }: MasterClientProps) {
     }
   };
 
-  const formatCurrency = (val: number | string) => {
-    const num = Number(val) || 0;
-    return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
-  };
-
   // --- Column Definitions ---
-  const itemColumns: ColumnDef<ItemRow>[] = [
-    {
-      accessorKey: "itemCode",
-      header: "Kode Item",
-      cell: ({ row }) => <span className="font-mono font-medium text-xs text-primary">{row.original.itemCode}</span>,
-    },
-    {
-      accessorKey: "name",
-      header: "Nama Material",
-      cell: ({ row }) => <span className="font-semibold text-foreground">{row.original.name}</span>,
-    },
-    {
-      accessorKey: "category",
-      header: "Kategori",
-      cell: ({ row }) => <Badge variant="secondary" className="text-[11px] font-mono">{row.original.category}</Badge>,
-    },
-    {
-      accessorKey: "uom",
-      header: "Satuan",
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.uom?.name || "-"} ({row.original.uom?.code})</span>,
-    },
-    {
-      accessorKey: "standardPrice",
-      header: "Harga Standar",
-      cell: ({ row }) => <span className="font-mono tabular-nums font-medium">{formatCurrency(row.original.standardPrice)}</span>,
-    },
-    {
-      accessorKey: "isActive",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge variant={row.original.isActive ? "default" : "secondary"} className="text-[11px]">
-          {row.original.isActive ? "Aktif" : "Nonaktif"}
-        </Badge>
-      ),
-    },
-    ...(canModify
-      ? [
-          {
-            id: "actions",
-            header: "Aksi",
-            cell: ({ row }: { row: { original: ItemRow } }) => (
-              <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Ubah item ${row.original.name}`} onClick={() => { setEditItem(row.original as unknown as Record<string, unknown>); setIsAddOpen(true); }}>
-                  <Edit className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" aria-label={`Hapus item ${row.original.name}`} onClick={() => setDeleteTarget({ type: "item", id: row.original.id, name: row.original.name })}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ),
-          },
-        ]
-      : []),
-  ];
-
   const uomColumns: ColumnDef<UomRow>[] = [
     {
       accessorKey: "code",
@@ -641,8 +582,8 @@ export function MasterClient({ userRole }: MasterClientProps) {
             <TabsTrigger value="holiday">Hari Libur</TabsTrigger>
           </TabsList>
 
-          {/* Search bar (sembunyikan di tab location karena location memiliki search terpadu) */}
-          {tab !== "location" && (
+          {/* Search bar (sembunyikan di tab location dan item karena memiliki search terpadu) */}
+          {tab !== "location" && tab !== "item" && (
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -658,17 +599,14 @@ export function MasterClient({ userRole }: MasterClientProps) {
 
         {/* Tab 1: Item */}
         <TabsContent value="item" className="space-y-4 m-0">
-          <Card className="border-border shadow-xs">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Katalog Master Material & Harga</CardTitle>
-              <CardDescription className="text-xs">
-                Daftar barang material yang dipakai dalam penyusunan RAB, WorkPackage, dan template BOQ.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DataTable columns={itemColumns} data={(responseData as ItemRow[]) || []} isLoading={isLoading} />
-            </CardContent>
-          </Card>
+          <MasterItemTab
+            canModify={canModify}
+            onEditItem={(item) => {
+              setEditItem(item as unknown as Record<string, unknown>);
+              setIsAddOpen(true);
+            }}
+            onDeleteItem={setDeleteTarget}
+          />
         </TabsContent>
 
         {/* Tab 2: UoM */}

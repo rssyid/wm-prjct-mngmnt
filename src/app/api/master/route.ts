@@ -142,15 +142,25 @@ export async function GET(request: NextRequest) {
       }
 
       case "item": {
+        const categoryParam = searchParams.get("category");
+        const statusParam = searchParams.get("status");
+
         const data = await prisma.item.findMany({
-          where: search
-            ? {
-                OR: [
-                  { itemCode: { contains: search, mode: "insensitive" } },
-                  { name: { contains: search, mode: "insensitive" } },
-                ],
-              }
-            : undefined,
+          where: {
+            ...(categoryParam && categoryParam !== "ALL"
+              ? { category: categoryParam as Prisma.EnumPackageCategoryFilter["equals"] }
+              : {}),
+            ...(statusParam === "ACTIVE" ? { isActive: true } : statusParam === "INACTIVE" ? { isActive: false } : {}),
+            ...(search
+              ? {
+                  OR: [
+                    { itemCode: { contains: search, mode: "insensitive" } },
+                    { name: { contains: search, mode: "insensitive" } },
+                    { specification: { contains: search, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
           include: {
             uom: {
               select: { id: true, code: true, name: true },

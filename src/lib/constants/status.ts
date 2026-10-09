@@ -14,12 +14,32 @@ export interface StatusConfig {
   dotClass: string;
 }
 
-export const PACKAGE_CATEGORY_CONFIG: Record<PackageCategory, { label: string }> = {
-  MATERIAL: { label: "Material" },
-  FABRICATION: { label: "Fabrikasi" },
-  CONTRACTOR: { label: "Kontraktor" },
-  HEAVY_EQUIPMENT: { label: "Alat Berat" },
-  SWAKELOLA: { label: "Swakelola" },
+export const PACKAGE_CATEGORY_CONFIG: Record<PackageCategory, StatusConfig> = {
+  MATERIAL: {
+    label: "Material",
+    badgeClass: "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border-blue-200 dark:border-blue-900",
+    dotClass: "bg-blue-500",
+  },
+  FABRICATION: {
+    label: "Fabrikasi",
+    badgeClass: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border-amber-200 dark:border-amber-900",
+    dotClass: "bg-amber-500",
+  },
+  CONTRACTOR: {
+    label: "Kontraktor",
+    badgeClass: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900",
+    dotClass: "bg-emerald-500",
+  },
+  HEAVY_EQUIPMENT: {
+    label: "Alat Berat",
+    badgeClass: "bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border-purple-200 dark:border-purple-900",
+    dotClass: "bg-purple-500",
+  },
+  SWAKELOLA: {
+    label: "Swakelola",
+    badgeClass: "bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-400 border-teal-200 dark:border-teal-900",
+    dotClass: "bg-teal-500",
+  },
 };
 
 /**
