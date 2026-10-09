@@ -1,4 +1,5 @@
 import { LoginForm } from "@/components/auth/login-form";
+import { LoginHero } from "@/components/auth/login-hero";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -17,16 +18,20 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Suspense
-        fallback={
-          <div className="w-full max-w-md p-8 text-center text-slate-500">
-            Memuat formulir...
-          </div>
-        }
-      >
-        <LoginForm />
-      </Suspense>
+    <main className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-background">
+      <section className="flex flex-col justify-center w-full">
+        <Suspense
+          fallback={
+            <div className="w-full max-w-md mx-auto p-8 text-center text-slate-500">
+              Memuat formulir masuk...
+            </div>
+          }
+        >
+          <LoginForm />
+        </Suspense>
+      </section>
+
+      <LoginHero />
     </main>
   );
 }

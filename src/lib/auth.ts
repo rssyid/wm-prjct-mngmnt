@@ -10,7 +10,7 @@ export const authOptions: NextAuthOptions = {
   secret: getRequiredEnv("NEXTAUTH_SECRET"),
   session: {
     strategy: "jwt",
-    maxAge: 8 * 60 * 60, // 8 jam
+    maxAge: 30 * 24 * 60 * 60, // Sesi hingga 30 hari (didukung oleh Remember Me)
   },
   pages: {
     signIn: "/login",
@@ -21,14 +21,19 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember Me", type: "text" },
       },
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
+        const parsed = loginSchema.safeParse({
+          email: credentials?.email,
+          password: credentials?.password,
+          rememberMe: credentials?.rememberMe === "true",
+        });
         if (!parsed.success) {
           return null;
         }
 
-        const { email, password } = parsed.data;
+        const { email, password, rememberMe } = parsed.data;
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -56,6 +61,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           role: user.role,
+          rememberMe,
         };
       },
     }),
@@ -65,6 +71,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.rememberMe = user.rememberMe;
       }
       return token;
     },
