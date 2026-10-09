@@ -176,7 +176,13 @@ export function LoginForm() {
             <Checkbox
               id="rememberMe"
               checked={rememberMeValue}
-              onCheckedChange={(checked) => setValue("rememberMe", checked)}
+              onCheckedChange={(checked) =>
+                setValue("rememberMe", checked, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
+                })
+              }
               disabled={isLoading}
             />
             <Label

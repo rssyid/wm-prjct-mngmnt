@@ -10,45 +10,66 @@ export interface CheckboxProps
 }
 
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ className, checked, defaultChecked, onChange, onCheckedChange, ...props }, ref) => {
-    const isControlled = checked !== undefined;
-    const [internalChecked, setInternalChecked] = React.useState<boolean>(
+  (
+    {
+      className,
+      checked,
+      defaultChecked,
+      onChange,
+      onCheckedChange,
+      disabled,
+      id,
+      ...props
+    },
+    ref
+  ) => {
+    const [isChecked, setIsChecked] = React.useState<boolean>(
       Boolean(defaultChecked ?? false)
     );
 
-    const isCurrentChecked = isControlled ? Boolean(checked) : internalChecked;
+    const isControlled = checked !== undefined;
+    const currentChecked = isControlled ? Boolean(checked) : isChecked;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const nextChecked = e.target.checked;
+      if (disabled) return;
       if (!isControlled) {
-        setInternalChecked(nextChecked);
+        setIsChecked(e.target.checked);
       }
       onChange?.(e);
-      onCheckedChange?.(nextChecked);
+      onCheckedChange?.(e.target.checked);
     };
 
     return (
-      <span className="relative inline-flex items-center">
+      <label
+        htmlFor={id}
+        className={cn(
+          "relative inline-flex h-4 w-4 shrink-0 items-center justify-center cursor-pointer select-none",
+          disabled && "cursor-not-allowed opacity-50"
+        )}
+      >
         <input
           type="checkbox"
+          id={id}
           ref={ref}
           checked={checked}
           defaultChecked={defaultChecked}
+          disabled={disabled}
           onChange={handleChange}
-          className="peer sr-only"
+          className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
           {...props}
         />
         <span
           className={cn(
-            "flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-300 dark:border-slate-700 bg-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50 cursor-pointer",
-            isCurrentChecked && "bg-primary border-primary text-primary-foreground",
+            "flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-300 dark:border-slate-700 bg-background transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2",
+            currentChecked &&
+              "bg-primary border-primary text-primary-foreground",
             className
           )}
           aria-hidden="true"
         >
-          {isCurrentChecked && <Check className="h-3 w-3 stroke-[3]" />}
+          {currentChecked && <Check className="h-3 w-3 stroke-[3]" />}
         </span>
-      </span>
+      </label>
     );
   }
 );
