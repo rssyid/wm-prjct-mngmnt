@@ -29,6 +29,7 @@ export interface AfceInfo {
     status: string;
     approvalLevel?: number;
     attemptNo?: number;
+    notes?: string | null;
     approvedAt?: string | Date | null;
   }> | null;
 }
@@ -297,8 +298,17 @@ export function ProjectMatrixGanttChart({
       afceDocument?.approvals ??
       [];
 
+    const isSnapshotNotRequired = (a: { status?: string; notes?: string | null }) =>
+      a.status === "TIDAK_PERLU" ||
+      a.notes === "TIDAK_PERLU" ||
+      Boolean(a.notes?.startsWith("[TIDAK_PERLU]"));
+
+    // Hanya perhitungkan level yang benar-benar diwajibkan dan disetujui
     const approvedSnapshots = activeApprovals.filter(
-      (a) => a.status === "APPROVED" && a.approvedAt
+      (a) =>
+        a.status === "APPROVED" &&
+        !isSnapshotNotRequired(a) &&
+        a.approvedAt
     );
 
     // Level terakhir yang approve

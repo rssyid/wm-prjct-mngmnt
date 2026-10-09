@@ -38,6 +38,7 @@ export interface SCurveAfceInfo {
     status: string;
     approvalLevel?: number;
     attemptNo?: number;
+    notes?: string | null;
     approvedAt?: string | Date | null;
   }> | null;
 }
@@ -113,8 +114,16 @@ export function ProjectSCurveChart({
     const isDocApproved = afceDocument?.status === "APPROVED";
 
     let lastApprovedDate: Date | null = null;
+    const isSnapshotNotRequired = (a: { status?: string; notes?: string | null }) =>
+      a.status === "TIDAK_PERLU" ||
+      a.notes === "TIDAK_PERLU" ||
+      Boolean(a.notes?.startsWith("[TIDAK_PERLU]"));
+
     const approvedSnapshots = activeApprovals.filter(
-      (a) => a.status === "APPROVED" && a.approvedAt
+      (a) =>
+        a.status === "APPROVED" &&
+        !isSnapshotNotRequired(a) &&
+        a.approvedAt
     );
     if (approvedSnapshots.length > 0) {
       const latestTs = Math.max(

@@ -191,32 +191,38 @@ export async function upsertAfceDocument(
 
     if (sortedApprovals.length > 0) {
       await tx.approvalSnapshot.createMany({
-        data: sortedApprovals.map((item) => ({
-          afceDocumentId: afce.id,
-          attemptNo: currentAttempt,
-          documentType: ApprovalDocType.AR,
-          approvalLevel: item.approvalLevel,
-          role: item.role,
-          personName: item.personName || null,
-          status: item.status,
-          submittedAt: item.submittedAt
-            ? new Date(item.submittedAt)
-            : new Date(),
-          approvedAt:
-            item.status === "APPROVED"
-              ? item.approvedAt
-                ? new Date(item.approvedAt)
-                : new Date()
-              : null,
-          rejectedAt:
-            item.status === "REJECTED"
-              ? item.rejectedAt
-                ? new Date(item.rejectedAt)
-                : new Date()
-              : null,
-          notes: item.notes || null,
-          evidenceDocUrl: item.evidenceDocUrl || null,
-        })),
+        data: sortedApprovals.map((item) => {
+          const isNotRequired =
+            item.notes === "TIDAK_PERLU" ||
+            Boolean(item.notes?.startsWith("[TIDAK_PERLU]"));
+
+          return {
+            afceDocumentId: afce.id,
+            attemptNo: currentAttempt,
+            documentType: ApprovalDocType.AR,
+            approvalLevel: item.approvalLevel,
+            role: item.role,
+            personName: item.personName || null,
+            status: item.status,
+            submittedAt: item.submittedAt
+              ? new Date(item.submittedAt)
+              : new Date(),
+            approvedAt:
+              item.status === "APPROVED" && !isNotRequired
+                ? item.approvedAt
+                  ? new Date(item.approvedAt)
+                  : null
+                : null,
+            rejectedAt:
+              item.status === "REJECTED"
+                ? item.rejectedAt
+                  ? new Date(item.rejectedAt)
+                  : new Date()
+                : null,
+            notes: item.notes || null,
+            evidenceDocUrl: item.evidenceDocUrl || null,
+          };
+        }),
       });
     }
 

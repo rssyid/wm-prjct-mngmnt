@@ -456,10 +456,8 @@ export function AfceTab({
             personName: a.personName.trim() || null,
             status: isNotRequired ? ApprovalStatus.APPROVED : a.status,
             approvedAt:
-              a.status === ApprovalStatus.APPROVED && a.approvedAt
+              !isNotRequired && a.status === ApprovalStatus.APPROVED && a.approvedAt
                 ? new Date(a.approvedAt).toISOString()
-                : isNotRequired
-                ? new Date().toISOString()
                 : null,
             notes: isNotRequired
               ? a.notes ? `[TIDAK_PERLU] ${a.notes.trim()}` : "TIDAK_PERLU"
