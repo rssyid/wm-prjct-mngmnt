@@ -25,6 +25,8 @@ interface ProjectTimelineTabProps {
     id: string;
     targetStartDate?: string | Date | null;
     targetEndDate?: string | Date | null;
+    revisedEndDate?: string | Date | null;
+    status?: AfceStatus | string | null;
     currentWeek?: number;
     afceDocument?: {
       id?: string;
@@ -118,7 +120,10 @@ export function ProjectTimelineTab({
     return rawPackages.map((pkg) => ({
       id: pkg.id,
       packageName: pkg.packageName,
-      weightPct: pkg.weightPct,
+      weightPct: Number(pkg.weightPct) || 0,
+      planStartDate: pkg.planStartDate,
+      planEndDate: pkg.planEndDate,
+      revisedEndDate: pkg.revisedEndDate,
     }));
   }, [rawPackages]);
 
@@ -193,6 +198,8 @@ export function ProjectTimelineTab({
       <ProjectSCurveChart
         targetStartDate={project.targetStartDate}
         targetEndDate={project.targetEndDate}
+        revisedEndDate={project.revisedEndDate}
+        isCompleted={project.status === "COMPLETED"}
         currentWeek={project.currentWeek || 1}
         packages={sCurvePackages}
         logs={logs}

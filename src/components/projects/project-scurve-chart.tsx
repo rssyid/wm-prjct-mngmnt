@@ -18,6 +18,9 @@ export interface SCurvePackage {
   id: string;
   packageName: string;
   weightPct: number;
+  planStartDate?: string | Date | null;
+  planEndDate?: string | Date | null;
+  revisedEndDate?: string | Date | null;
 }
 
 export interface SCurveLog {
@@ -46,6 +49,8 @@ export interface SCurveAfceInfo {
 interface ProjectSCurveChartProps {
   targetStartDate?: string | Date | null;
   targetEndDate?: string | Date | null;
+  revisedEndDate?: string | Date | null;
+  isCompleted?: boolean;
   currentWeek?: number;
   packages: SCurvePackage[];
   logs: SCurveLog[];
@@ -64,6 +69,8 @@ interface ChartDataPoint {
 export function ProjectSCurveChart({
   targetStartDate,
   targetEndDate,
+  revisedEndDate,
+  isCompleted = false,
   currentWeek = 1,
   packages,
   logs,
@@ -72,22 +79,55 @@ export function ProjectSCurveChart({
 }: ProjectSCurveChartProps) {
   // Hitung rentang minggu dan data titik kurva S (Bobot: AFCE 5%, Paket Fisik 95%)
   const { chartData, currentPlanPct, currentActualPct, variancePct } = useMemo(() => {
-    // 1. Tentukan estimasi total minggu
-    let weeksCount = 12; // default fallback
+    // Normalisasi hari Senin terdekat (Start of Week) agar sinkron 1:1 dengan Gantt Chart
+    const getStartOfWeek = (date: Date): Date => {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      const day = d.getDay(); // 0 is Sunday, 1 is Monday
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d;
+    };
 
-    if (targetStartDate && targetEndDate) {
-      const s = new Date(targetStartDate).getTime();
-      const e = new Date(targetEndDate).getTime();
-      if (!isNaN(s) && !isNaN(e) && e > s) {
-        const diffWeeks = Math.ceil((e - s) / (7 * 24 * 60 * 60 * 1000));
-        weeksCount = Math.max(4, diffWeeks);
-      }
-    }
+    // 1. Kumpulkan seluruh tanggal relevan (proyek, target revisi, & seluruh paket kerja)
+    const dates: number[] = [];
+    if (targetStartDate) dates.push(new Date(targetStartDate).getTime());
+    if (targetEndDate) dates.push(new Date(targetEndDate).getTime());
+    if (revisedEndDate) dates.push(new Date(revisedEndDate).getTime());
 
-    // Periksa jika log tertinggi melebihi estimasi
+    packages.forEach((pkg) => {
+      if (pkg.planStartDate) dates.push(new Date(pkg.planStartDate).getTime());
+      if (pkg.planEndDate) dates.push(new Date(pkg.planEndDate).getTime());
+      if (pkg.revisedEndDate) dates.push(new Date(pkg.revisedEndDate).getTime());
+    });
+
+    const nowTs = new Date().getTime();
+    const minTs = dates.length > 0 ? Math.min(...dates) : nowTs;
+    const maxTs = dates.length > 0 ? Math.max(...dates) : nowTs;
+
+    const startMonday = getStartOfWeek(new Date(minTs));
+    const endMonday = getStartOfWeek(new Date(maxTs));
+
+    // Hitung jumlah minggu kalender penuh dari awal hingga batas akhir proyek (sinkron dengan Gantt Chart)
+    const diffCalendarDays = Math.round(
+      (endMonday.getTime() - startMonday.getTime()) / (24 * 60 * 60 * 1000)
+    );
+    const calendarWeeksCount = Math.max(1, Math.floor(diffCalendarDays / 7) + 1);
+
+    // Target baseline awal (targetEndDate) berakhir di minggu ke berapa
+    const targetEndTs = targetEndDate ? new Date(targetEndDate).getTime() : maxTs;
+    const targetEndMonday = getStartOfWeek(new Date(targetEndTs));
+    const targetEndWeek = Math.max(
+      1,
+      Math.floor(
+        Math.round((targetEndMonday.getTime() - startMonday.getTime()) / (24 * 60 * 60 * 1000)) / 7
+      ) + 1
+    );
+
+    // Periksa jika log tertinggi atau currentWeek melebihi kalender dasar
     const maxLogWeek = logs.reduce((max, l) => Math.max(max, l.weekNo), 0);
     const activeCurrentWeek = Math.max(1, currentWeek, maxLogWeek);
-    const finalTotalWeeks = Math.max(weeksCount, activeCurrentWeek);
+    const finalTotalWeeks = Math.max(calendarWeeksCount, activeCurrentWeek, 4);
 
     // 2. Petakan log per paket per minggu
     // logsByPackage: Map<wpId, Map<weekNo, progressPct>>
@@ -137,10 +177,10 @@ export function ProjectSCurveChart({
       lastApprovedDate = new Date(afceDocument.mcaApprovalDate);
     }
 
-    const projectStartTs = targetStartDate ? new Date(targetStartDate).getTime() : null;
     const getWeekNumber = (date: Date) => {
-      if (!projectStartTs) return 1;
-      return Math.max(1, Math.ceil((date.getTime() - projectStartTs) / (7 * 24 * 60 * 60 * 1000)));
+      const dMonday = getStartOfWeek(date);
+      const diff = Math.round((dMonday.getTime() - startMonday.getTime()) / (24 * 60 * 60 * 1000));
+      return Math.max(1, Math.floor(diff / 7) + 1);
     };
 
     const finalApprovalWeekNo = lastApprovedDate ? getWeekNumber(lastApprovedDate) : 1;
@@ -156,20 +196,23 @@ export function ProjectSCurveChart({
       deviasi: 0,
     });
 
+    // Cek apakah proyek secara keseluruhan sudah mencapai 100% atau berstatus COMPLETED
+    const latestMaxLog = logs.filter((l) => l.progressPct >= 100);
+    const hasReached100 = isCompleted || latestMaxLog.length > 0;
+
     // Hitung tiap minggu dari 1 s/d finalTotalWeeks
     for (let w = 1; w <= finalTotalWeeks; w++) {
-      // A. Rencana:
+      // A. Rencana (Opsi 1: Baseline rencana awal mencapai 100% pada targetEndWeek, setelah itu tetap 100%):
       // Approval direncanakan 2 minggu: M1 = 2.5%, M2+ = 5.0%
       const afcePlanPct = w === 1 ? 2.5 : 5.0;
-      // Paket kerja linear proporsional mengisi sisa 95%
-      const wpPlanPct = (w / finalTotalWeeks) * 95;
-      const planPct = Math.min(100, Math.round((afcePlanPct + wpPlanPct) * 10) / 10);
+      const wpPlanProgress = w >= targetEndWeek ? 95.0 : (w / targetEndWeek) * 95.0;
+      const planPct = Math.min(100, Math.round((afcePlanPct + wpPlanProgress) * 10) / 10);
 
-      // B. Realisasi (hanya sampai activeCurrentWeek):
+      // B. Realisasi (hanya sampai activeCurrentWeek, atau diteruskan 100% jika proyek sudah selesai):
       let actualPct: number | null = null;
       let dev: number | null = null;
 
-      if (w <= activeCurrentWeek) {
+      if (w <= activeCurrentWeek || (hasReached100 && w <= finalTotalWeeks)) {
         // 1) Realisasi Approval (Maks 5%)
         let afceActualPct = 0;
         if (isDocApproved) {
@@ -242,7 +285,16 @@ export function ProjectSCurveChart({
       currentActualPct: actualNow,
       variancePct: diffNow,
     };
-  }, [targetStartDate, targetEndDate, currentWeek, packages, logs, afceDocument]);
+  }, [
+    targetStartDate,
+    targetEndDate,
+    revisedEndDate,
+    isCompleted,
+    currentWeek,
+    packages,
+    logs,
+    afceDocument,
+  ]);
 
   return (
     <Card className={cn("border-border shadow-xs", className)}>

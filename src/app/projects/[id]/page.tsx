@@ -104,6 +104,7 @@ interface ProjectDetailResponse {
     uom: string | null;
     targetStartDate: string | null;
     targetEndDate: string | null;
+    revisedEndDate?: string | null;
     latitude: number | null;
     longitude: number | null;
     sitePlanUrl?: string | null;
@@ -785,6 +786,8 @@ export default function ProjectDetailPage({
                     id: project.id,
                     targetStartDate: project.targetStartDate,
                     targetEndDate: project.targetEndDate,
+                    revisedEndDate: project.revisedEndDate,
+                    status: project.status,
                     currentWeek: project.currentWeek,
                     afceDocument: project.afceDocument,
                     bastDocument: project.bastDocument,
