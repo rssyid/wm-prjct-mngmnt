@@ -121,6 +121,7 @@ interface FullPackageDetail {
   actualDeliveryDate?: string | null;
   planStartDate?: string | null;
   planEndDate?: string | null;
+  revisedEndDate?: string | null;
   deliveryDelayDays?: number;
   remarks?: string | null;
   vendor?: { id: string; name: string } | null;
@@ -1062,6 +1063,16 @@ export function PackageDetailDialog({
                           {formatDate(pkg.planEndDate)}
                         </span>
                       </div>
+                      {pkg.revisedEndDate && (
+                        <div>
+                          <span className="text-amber-600 dark:text-amber-400 block text-[11px] font-medium">
+                            Target Revisi (Gantt):
+                          </span>
+                          <span className="font-semibold text-amber-700 dark:text-amber-300">
+                            {formatDate(pkg.revisedEndDate)}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <span className="text-muted-foreground block text-[11px]">
                           PIC Lapangan:

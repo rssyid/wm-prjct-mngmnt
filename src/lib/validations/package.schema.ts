@@ -73,6 +73,7 @@ export const packageCreateSchema = z
     planEndDate: emptyDateToNull,
     actualStartDate: emptyDateToNull,
     actualEndDate: emptyDateToNull,
+    revisedEndDate: emptyDateToNull,
     paymentStatus: z
       .nativeEnum(PaymentStatus)
       .default(PaymentStatus.BELUM_LUNAS),
@@ -103,6 +104,18 @@ export const packageCreateSchema = z
     {
       message: "Estimasi tanggal mulai harus lebih awal atau sama dengan tanggal selesai",
       path: ["planEndDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.planStartDate && data.revisedEndDate) {
+        return data.planStartDate <= data.revisedEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Target tanggal revisi harus lebih lambat atau sama dengan tanggal mulai",
+      path: ["revisedEndDate"],
     }
   );
 
@@ -138,6 +151,7 @@ export const packageUpdateSchema = z
     planEndDate: emptyDateToNull.optional(),
     actualStartDate: emptyDateToNull.optional(),
     actualEndDate: emptyDateToNull.optional(),
+    revisedEndDate: emptyDateToNull.optional(),
     paymentStatus: z.nativeEnum(PaymentStatus).optional(),
     paidAmount: emptyNumberToNull.optional(),
     paidDate: emptyDateToNull.optional(),
@@ -166,6 +180,18 @@ export const packageUpdateSchema = z
     {
       message: "Estimasi tanggal mulai harus lebih awal atau sama dengan tanggal selesai",
       path: ["planEndDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.planStartDate && data.revisedEndDate) {
+        return data.planStartDate <= data.revisedEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Target tanggal revisi harus lebih lambat atau sama dengan tanggal mulai",
+      path: ["revisedEndDate"],
     }
   );
 

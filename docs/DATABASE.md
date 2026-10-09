@@ -169,6 +169,7 @@ Index: `@@index([afceDocumentId, attemptNo])`, `@@index([workPackageId])`.
 | paidAmount / paidDate | Decimal(18,2)? / DateTime? | |
 | planStartDate / planEndDate | DateTime? | rencana (Gantt) |
 | actualStartDate / actualEndDate | DateTime? | realisasi (Gantt) |
+| revisedEndDate | DateTime? | target selesai revisi (Gantt matriks) |
 | status | PackageStatus | default DRAFT |
 | remarks | String? | |
 | createdById | String? | FK→User |

@@ -123,6 +123,11 @@ interface ProjectDetailResponse {
       currentAttempt: number;
       emailSubmittedDate?: string | null;
       mcaApprovalDate?: string | null;
+      approvals?: Array<{
+        role: string;
+        status: string;
+        approvedAt?: string | null;
+      }> | null;
     } | null;
     bastDocument?: {
       id: string;

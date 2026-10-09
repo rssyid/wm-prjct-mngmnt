@@ -11,7 +11,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PACKAGE_CATEGORY_CONFIG } from "@/lib/constants/status";
+import {
+  PACKAGE_CATEGORY_CONFIG,
+  normalizeApprovalRoleCode,
+} from "@/lib/constants/status";
 import { cn, formatDate } from "@/lib/utils";
 import { AfceStatus, PackageCategory } from "@prisma/client";
 import { Calendar, Check, FileCheck } from "lucide-react";
@@ -24,6 +27,11 @@ export interface AfceInfo {
   status?: AfceStatus | string | null;
   noAr?: string | null;
   currentAttempt?: number;
+  approvals?: Array<{
+    role: string;
+    status: string;
+    approvedAt?: string | Date | null;
+  }> | null;
 }
 
 export interface ProjectMatrixGanttChartProps {
@@ -127,6 +135,7 @@ export function ProjectMatrixGanttChart({
       if (pkg.planEndDate) dates.push(new Date(pkg.planEndDate).getTime());
       if (pkg.actualStartDate) dates.push(new Date(pkg.actualStartDate).getTime());
       if (pkg.actualEndDate) dates.push(new Date(pkg.actualEndDate).getTime());
+      if (pkg.revisedEndDate) dates.push(new Date(pkg.revisedEndDate).getTime());
     });
 
     dates.push(now.getTime());
@@ -207,20 +216,15 @@ export function ProjectMatrixGanttChart({
       const isPlan = Boolean(pStart && pEnd && !(wEnd < pStart || wStart > pEnd));
 
       // 2) Keterlambatan / Target Revisi:
+      // Hanya aktif jika user secara sadar menginput perubahan jadwal (revisedEndDate)
+      const rEnd = pkg.revisedEndDate ? new Date(pkg.revisedEndDate).getTime() : null;
       let isRevised = false;
 
-      if (pEnd && wStart > pEnd) {
-        if (aEnd && aEnd > pEnd) {
-          // Override batas akhir dari actualEndDate
-          if (wStart <= aEnd) {
-            isRevised = true;
-          }
-        } else if (!isCompleted) {
-          // Otomatis batas akhir hingga minggu berjalan saat ini (+1 minggu buffer)
-          const autoLimit = Math.max(now.getTime(), pEnd) + 7 * 24 * 60 * 60 * 1000;
-          if (wStart <= autoLimit) {
-            isRevised = true;
-          }
+      if (pEnd && rEnd && rEnd > pEnd) {
+        // Rentang revisi adalah setelah batas pEnd sampai dengan rEnd
+        const isRevisedRange = !(wEnd <= pEnd || wStart > rEnd);
+        if (isRevisedRange) {
+          isRevised = true;
         }
       }
 
@@ -241,7 +245,7 @@ export function ProjectMatrixGanttChart({
 
       // Simbol Selesai (✓)
       if (isCompleted) {
-        const targetFinishTs = aEnd || pEnd;
+        const targetFinishTs = aEnd || rEnd || pEnd;
         if (targetFinishTs && wStart <= targetFinishTs && targetFinishTs <= wEnd) {
           symbol = "✓";
         } else if (!targetFinishTs && isPlan && wEnd >= (pEnd || 0)) {
@@ -252,7 +256,7 @@ export function ProjectMatrixGanttChart({
       // Simbol Progres (#)
       if (!symbol && (pkg.progressPct > 0 || (aStart && aStart <= wEnd))) {
         const activeStart = aStart || pStart;
-        const activeEnd = isCompleted ? (aEnd || pEnd || now.getTime()) : now.getTime();
+        const activeEnd = isCompleted ? (aEnd || rEnd || pEnd || now.getTime()) : now.getTime();
 
         if (activeStart && wEnd >= activeStart && wStart <= activeEnd) {
           symbol = "#";
@@ -285,13 +289,21 @@ export function ProjectMatrixGanttChart({
     let groupIndexCounter = 1;
 
     // A. Baris Administrasi & Pengesahan Dokumen AR / AFCE
+    // Cari tanggal paraf MCA atau level approval terakhir dari snapshots
+    const mcaApprovalSnapshot = afceDocument?.approvals?.find(
+      (a) => normalizeApprovalRoleCode(a.role) === "MCA" && a.status === "APPROVED"
+    );
+    const resolvedMcaApprovalDate =
+      afceDocument?.mcaApprovalDate ||
+      (mcaApprovalSnapshot?.approvedAt ? new Date(mcaApprovalSnapshot.approvedAt) : null);
+
     const afceStart =
       afceDocument?.emailSubmittedDate ||
       milestones?.afceSubmittedDate ||
       targetStartDate;
 
     let afceEnd =
-      afceDocument?.mcaApprovalDate ||
+      resolvedMcaApprovalDate ||
       milestones?.afceApprovedDate;
 
     if (!afceEnd && afceStart) {
@@ -301,7 +313,7 @@ export function ProjectMatrixGanttChart({
     }
 
     const afceStatus = afceDocument?.status || (
-      afceDocument?.mcaApprovalDate || milestones?.afceApprovedDate
+      resolvedMcaApprovalDate || milestones?.afceApprovedDate
         ? "APPROVED"
         : afceDocument?.emailSubmittedDate || milestones?.afceSubmittedDate
         ? "SUBMITTED"
@@ -318,7 +330,7 @@ export function ProjectMatrixGanttChart({
 
       const sTs = afceStart ? new Date(afceStart).getTime() : null;
       const eTs = afceEnd ? new Date(afceEnd).getTime() : null;
-      const rawApprovalDate = afceDocument?.mcaApprovalDate || milestones?.afceApprovedDate;
+      const rawApprovalDate = resolvedMcaApprovalDate || milestones?.afceApprovedDate;
       const appTs = rawApprovalDate ? new Date(rawApprovalDate).getTime() : null;
 
       const isPlanRange = Boolean(sTs && eTs && !(wEnd < sTs || wStart > eTs));
@@ -327,10 +339,13 @@ export function ProjectMatrixGanttChart({
       let symbol = "";
 
       if (isApproved) {
-        if (appTs && wStart <= appTs && appTs <= wEnd) {
+        // Fallback tanggal persetujuan efektif: bila appTs null, fallback ke eTs atau sTs
+        const effectiveApprovalTs = appTs || eTs || sTs;
+
+        if (effectiveApprovalTs && wStart <= effectiveApprovalTs && effectiveApprovalTs <= wEnd) {
           styleType = "PLAN";
           symbol = "✓";
-        } else if (sTs && appTs && wEnd >= sTs && wStart <= appTs) {
+        } else if (sTs && effectiveApprovalTs && wEnd >= sTs && wStart <= effectiveApprovalTs) {
           styleType = "PLAN";
           symbol = "#";
         } else if (isPlanRange) {

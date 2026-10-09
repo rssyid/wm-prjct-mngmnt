@@ -520,6 +520,7 @@ model WorkPackage {
   planEndDate        DateTime?
   actualStartDate    DateTime?
   actualEndDate      DateTime?
+  revisedEndDate     DateTime?
   status             PackageStatus   @default(DRAFT)
   remarks            String? // juga alasan override DELIVERED manual
   createdById        String?

@@ -393,6 +393,7 @@ export async function createPackage(
         planEndDate: input.planEndDate || null,
         actualStartDate: input.actualStartDate || null,
         actualEndDate: input.actualEndDate || null,
+        revisedEndDate: input.revisedEndDate || null,
         paymentStatus: input.paymentStatus || PaymentStatus.BELUM_LUNAS,
         paidAmount:
           input.paidAmount !== null && input.paidAmount !== undefined
@@ -602,6 +603,7 @@ export async function updatePackage(
         planEndDate: input.planEndDate,
         actualStartDate: input.actualStartDate,
         actualEndDate: input.actualEndDate,
+        revisedEndDate: input.revisedEndDate,
         paymentStatus: input.paymentStatus,
         paidAmount:
           input.paidAmount !== undefined

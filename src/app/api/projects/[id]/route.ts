@@ -37,7 +37,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         structureVariant: { select: { id: true, code: true, name: true, defaultBoqItems: true } },
         pic: { select: { id: true, name: true, roleTitle: true, phone: true } },
         createdBy: { select: { id: true, name: true, email: true } },
-        afceDocument: true,
+        afceDocument: {
+          include: {
+            approvals: {
+              orderBy: [{ attemptNo: "asc" }, { approvalLevel: "asc" }],
+            },
+          },
+        },
         bastDocument: true,
         workPackages: {
           where: { deletedAt: null },

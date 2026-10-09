@@ -44,6 +44,7 @@ interface PackageFormDialogProps {
     estDeliveryDate?: string | null;
     planStartDate?: string | null;
     planEndDate?: string | null;
+    revisedEndDate?: string | null;
     contractOrPoAmount?: number | string;
     remarks?: string | null;
   } | null;
@@ -87,6 +88,7 @@ export function PackageFormDialog({
   const [estDeliveryDate, setEstDeliveryDate] = useState("");
   const [planStartDate, setPlanStartDate] = useState("");
   const [planEndDate, setPlanEndDate] = useState("");
+  const [revisedEndDate, setRevisedEndDate] = useState("");
   const [contractOrPoAmount, setContractOrPoAmount] = useState<string>("0");
   const [remarks, setRemarks] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -167,6 +169,11 @@ export function PackageFormDialog({
             ? new Date(initialData.planEndDate).toISOString().split("T")[0]
             : ""
         );
+        setRevisedEndDate(
+          initialData.revisedEndDate
+            ? new Date(initialData.revisedEndDate).toISOString().split("T")[0]
+            : ""
+        );
         setContractOrPoAmount(String(initialData.contractOrPoAmount ?? 0));
         setRemarks(initialData.remarks || "");
       } else {
@@ -184,6 +191,7 @@ export function PackageFormDialog({
         setEstDeliveryDate("");
         setPlanStartDate("");
         setPlanEndDate("");
+        setRevisedEndDate("");
         setContractOrPoAmount("0");
         setRemarks("");
       }
@@ -215,6 +223,16 @@ export function PackageFormDialog({
         }
       }
 
+      if (planStartDate && revisedEndDate) {
+        const dStart = new Date(planStartDate);
+        const dRev = new Date(revisedEndDate);
+        if (dStart > dRev) {
+          throw new Error(
+            "Target tanggal revisi harus lebih lambat atau sama dengan tanggal mulai"
+          );
+        }
+      }
+
       const selectedVendor = vendors.find((v) => v.id === vendorId);
       const payload = {
         packageName: packageName.trim(),
@@ -232,6 +250,7 @@ export function PackageFormDialog({
         estDeliveryDate: estDeliveryDate || null,
         planStartDate: planStartDate || null,
         planEndDate: planEndDate || null,
+        revisedEndDate: revisedEndDate || null,
         contractOrPoAmount: parseFloat(contractOrPoAmount) || 0,
         remarks: remarks.trim() || null,
       };
@@ -540,6 +559,27 @@ export function PackageFormDialog({
                   value={planEndDate}
                   onChange={(e) => setPlanEndDate(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2 pt-2 border-t border-border/60">
+                <Label htmlFor="revisedEndDate" className="text-xs flex items-center justify-between">
+                  <span className="font-semibold text-amber-700 dark:text-amber-400">
+                    Target Selesai Revisi (Bila Ada Perubahan Jadwal)
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-normal">
+                    (Opsional)
+                  </span>
+                </Label>
+                <Input
+                  id="revisedEndDate"
+                  type="date"
+                  value={revisedEndDate}
+                  onChange={(e) => setRevisedEndDate(e.target.value)}
+                  className="border-amber-300 dark:border-amber-800/70 focus-visible:ring-amber-500"
+                />
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Diisi hanya jika ada perubahan/adendum jadwal resmi. Akan memunculkan warna target revisi (kuning &amp; oranye) pada visualisasi matriks Gantt.
+                </p>
               </div>
             </div>
           </div>

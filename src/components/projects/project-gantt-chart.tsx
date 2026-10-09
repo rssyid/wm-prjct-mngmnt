@@ -28,6 +28,7 @@ export interface GanttPackageItem {
   planEndDate?: string | Date | null;
   actualStartDate?: string | Date | null;
   actualEndDate?: string | Date | null;
+  revisedEndDate?: string | Date | null;
 }
 
 export interface ProjectMilestoneInfo {

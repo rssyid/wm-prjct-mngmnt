@@ -33,6 +33,11 @@ interface ProjectTimelineTabProps {
       status?: AfceStatus | string | null;
       noAr?: string | null;
       currentAttempt?: number;
+      approvals?: Array<{
+        role: string;
+        status: string;
+        approvedAt?: string | Date | null;
+      }> | null;
     } | null;
     bastDocument?: {
       submittedAt?: string | Date | null;
