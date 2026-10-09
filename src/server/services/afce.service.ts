@@ -1,4 +1,5 @@
 import { AppError } from "@/lib/api-error";
+import { normalizeApprovalRoleCode } from "@/lib/constants/status";
 import { prisma } from "@/lib/prisma";
 import { invalidateDashboardCache } from "@/lib/redis";
 import {
@@ -128,6 +129,14 @@ export async function upsertAfceDocument(
     }
   }
 
+  // Otomatis sinkronisasi mcaApprovalDate dari baris approval MCA jika status APPROVED
+  const mcaApproval = sortedApprovals.find(
+    (a) => normalizeApprovalRoleCode(a.role) === "MCA" && a.status === "APPROVED"
+  );
+  const resolvedMcaDate = mcaApproval?.approvedAt
+    ? new Date(mcaApproval.approvedAt)
+    : null;
+
   const result = await prisma.$transaction(async (tx) => {
     // 1. Cek atau buat AfceDocument
     const existingAfce = await tx.afceDocument.findUnique({
@@ -151,9 +160,7 @@ export async function upsertAfceDocument(
         emailSubmittedDate: input.emailSubmittedDate
           ? new Date(input.emailSubmittedDate)
           : null,
-        mcaApprovalDate: input.mcaApprovalDate
-          ? new Date(input.mcaApprovalDate)
-          : null,
+        mcaApprovalDate: resolvedMcaDate,
         currentAttempt: 1,
         status: targetAfceStatus,
       },
@@ -169,9 +176,7 @@ export async function upsertAfceDocument(
         emailSubmittedDate: input.emailSubmittedDate
           ? new Date(input.emailSubmittedDate)
           : null,
-        mcaApprovalDate: input.mcaApprovalDate
-          ? new Date(input.mcaApprovalDate)
-          : null,
+        mcaApprovalDate: resolvedMcaDate,
         status: targetAfceStatus,
       },
     });
@@ -319,6 +324,7 @@ export async function resubmitAfceDocument(projectId: string, actorId: string) {
       data: {
         currentAttempt: nextAttempt,
         status: AfceStatus.PENDING,
+        mcaApprovalDate: null,
       },
     });
 

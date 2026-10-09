@@ -187,7 +187,6 @@ export function AfceTab({
   const [mapReady, setMapReady] = useState(false);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [emailSubmittedDate, setEmailSubmittedDate] = useState("");
-  const [mcaApprovalDate, setMcaApprovalDate] = useState("");
 
   // Approvals State (Attempt Aktif)
   const [activeApprovals, setActiveApprovals] = useState<ApprovalItemState[]>([]);
@@ -220,11 +219,6 @@ export function AfceTab({
       setEmailSubmittedDate(
         afce.emailSubmittedDate
           ? new Date(afce.emailSubmittedDate).toISOString().split("T")[0]
-          : ""
-      );
-      setMcaApprovalDate(
-        afce.mcaApprovalDate
-          ? new Date(afce.mcaApprovalDate).toISOString().split("T")[0]
           : ""
       );
 
@@ -446,9 +440,14 @@ export function AfceTab({
         emailSubmittedDate: emailSubmittedDate
           ? new Date(emailSubmittedDate).toISOString()
           : null,
-        mcaApprovalDate: mcaApprovalDate
-          ? new Date(mcaApprovalDate).toISOString()
-          : null,
+        mcaApprovalDate: (() => {
+          const mca = activeApprovals.find(
+            (a) =>
+              normalizeApprovalRoleCode(a.role) === "MCA" &&
+              a.status === ApprovalStatus.APPROVED
+          );
+          return mca?.approvedAt ? new Date(mca.approvedAt).toISOString() : null;
+        })(),
         approvals: activeApprovals.map((a) => {
           const isNotRequired = a.status === "TIDAK_PERLU";
           return {
@@ -874,8 +873,8 @@ export function AfceTab({
           </div>
 
           {/* Tanggal Terkait */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border">
-            <div className="space-y-1.5">
+          <div className="pt-2 border-t border-border">
+            <div className="max-w-xs space-y-1.5">
               <Label htmlFor="emailSubmittedDate" className="text-xs font-medium">
                 Tanggal Pengajuan Email {emailSubmitted && <span className="text-rose-500">*</span>}
               </Label>
@@ -884,20 +883,6 @@ export function AfceTab({
                 type="date"
                 value={emailSubmittedDate}
                 onChange={(e) => setEmailSubmittedDate(e.target.value)}
-                disabled={isCompletedOrCancelled}
-                className="h-9 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="mcaApprovalDate" className="text-xs font-medium">
-                Tanggal Persetujuan MCA (Bila Ada)
-              </Label>
-              <Input
-                id="mcaApprovalDate"
-                type="date"
-                value={mcaApprovalDate}
-                onChange={(e) => setMcaApprovalDate(e.target.value)}
                 disabled={isCompletedOrCancelled}
                 className="h-9 text-xs"
               />
