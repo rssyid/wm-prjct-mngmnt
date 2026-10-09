@@ -92,8 +92,54 @@ export interface WorkPackageProgressCardProps {
     createdAt?: string | Date;
   };
   equipmentLogs?: EquipmentLogRow[];
+  colorIndex?: number;
   onMutated?: () => void;
 }
+
+const PACKAGE_CARD_THEMES = [
+  {
+    cardBorder: "border-sky-300 dark:border-sky-800/80 shadow-sky-500/5",
+    headerBg: "bg-sky-500/10 border-b-sky-200 dark:border-b-sky-900/60",
+    badgeClass: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border-sky-300 dark:border-sky-800",
+    indicatorDot: "bg-sky-500",
+    textAccent: "text-sky-700 dark:text-sky-300",
+  },
+  {
+    cardBorder: "border-emerald-300 dark:border-emerald-800/80 shadow-emerald-500/5",
+    headerBg: "bg-emerald-500/10 border-b-emerald-200 dark:border-b-emerald-900/60",
+    badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800",
+    indicatorDot: "bg-emerald-500",
+    textAccent: "text-emerald-700 dark:text-emerald-300",
+  },
+  {
+    cardBorder: "border-amber-300 dark:border-amber-800/80 shadow-amber-500/5",
+    headerBg: "bg-amber-500/10 border-b-amber-200 dark:border-b-amber-900/60",
+    badgeClass: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800",
+    indicatorDot: "bg-amber-500",
+    textAccent: "text-amber-700 dark:text-amber-300",
+  },
+  {
+    cardBorder: "border-purple-300 dark:border-purple-800/80 shadow-purple-500/5",
+    headerBg: "bg-purple-500/10 border-b-purple-200 dark:border-b-purple-900/60",
+    badgeClass: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 dark:border-purple-800",
+    indicatorDot: "bg-purple-500",
+    textAccent: "text-purple-700 dark:text-purple-300",
+  },
+  {
+    cardBorder: "border-rose-300 dark:border-rose-800/80 shadow-rose-500/5",
+    headerBg: "bg-rose-500/10 border-b-rose-200 dark:border-b-rose-900/60",
+    badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800",
+    indicatorDot: "bg-rose-500",
+    textAccent: "text-rose-700 dark:text-rose-300",
+  },
+  {
+    cardBorder: "border-indigo-300 dark:border-indigo-800/80 shadow-indigo-500/5",
+    headerBg: "bg-indigo-500/10 border-b-indigo-200 dark:border-b-indigo-900/60",
+    badgeClass: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800",
+    indicatorDot: "bg-indigo-500",
+    textAccent: "text-indigo-700 dark:text-indigo-300",
+  },
+];
 
 export function WorkPackageProgressCard({
   workPackage,
@@ -103,9 +149,11 @@ export function WorkPackageProgressCard({
   logs,
   projectDates,
   equipmentLogs,
+  colorIndex = 0,
   onMutated,
 }: WorkPackageProgressCardProps) {
   const queryClient = useQueryClient();
+  const theme = PACKAGE_CARD_THEMES[colorIndex % PACKAGE_CARD_THEMES.length];
 
   // Filter logs khusus untuk paket kerja ini
   const packageLogs = useMemo(() => {
@@ -351,16 +399,17 @@ export function WorkPackageProgressCard({
   const todayStr = new Date().toISOString().split("T")[0];
 
   return (
-    <Card className="border-border shadow-xs overflow-hidden">
+    <Card className={cn("border-2 shadow-xs overflow-hidden transition-all", theme.cardBorder)}>
       {/* Header Kartu Paket */}
-      <CardHeader className="bg-muted/30 pb-4 border-b border-border">
+      <CardHeader className={cn("pb-4 border-b transition-colors", theme.headerBg)}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
+              <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", theme.indicatorDot)} />
               <CardTitle className="text-base font-bold text-foreground">
                 {workPackage.packageName}
               </CardTitle>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className={cn("text-xs font-semibold", theme.badgeClass)}>
                 {workPackage.category}
               </Badge>
             </div>

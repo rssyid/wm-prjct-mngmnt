@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { PACKAGE_CATEGORY_CONFIG } from "@/lib/constants/status";
 import { cn, formatDate } from "@/lib/utils";
-import { AfceStatus, PackageCategory } from "@prisma/client";
+import { AfceStatus, PackageCategory, PackageStatus } from "@prisma/client";
 import { Calendar, Check, FileCheck } from "lucide-react";
 import React, { useMemo } from "react";
 
@@ -131,6 +131,13 @@ export function ProjectMatrixGanttChart({
     if (milestones?.afceApprovedDate) dates.push(new Date(milestones.afceApprovedDate).getTime());
 
     packages.forEach((pkg) => {
+      if (pkg.procurementPlanStartDate) dates.push(new Date(pkg.procurementPlanStartDate).getTime());
+      if (pkg.procurementPlanEndDate) dates.push(new Date(pkg.procurementPlanEndDate).getTime());
+      if (pkg.procurementRevisedEndDate) dates.push(new Date(pkg.procurementRevisedEndDate).getTime());
+      if (pkg.poSpkDate) dates.push(new Date(pkg.poSpkDate).getTime());
+      if (pkg.prUspkDate) dates.push(new Date(pkg.prUspkDate).getTime());
+      if (pkg.estDeliveryDate) dates.push(new Date(pkg.estDeliveryDate).getTime());
+      if (pkg.actualDeliveryDate) dates.push(new Date(pkg.actualDeliveryDate).getTime());
       if (pkg.planStartDate) dates.push(new Date(pkg.planStartDate).getTime());
       if (pkg.planEndDate) dates.push(new Date(pkg.planEndDate).getTime());
       if (pkg.actualStartDate) dates.push(new Date(pkg.actualStartDate).getTime());
@@ -192,10 +199,123 @@ export function ProjectMatrixGanttChart({
     return { weeks: weekList, currentWeekIndex: foundCurrentWeek };
   }, [packages, milestones, targetStartDate, targetEndDate, afceDocument, now]);
 
-  // 2. Kelompokkan Data Termasuk Baris Approval AFCE
+  // 2. Kelompokkan Data Termasuk Baris Approval AFCE & Dua Sub-Baris per Paket Kerja
   const matrixGroups = useMemo(() => {
-    // Helper evaluasi status sel mingguan untuk paket kerja biasa
-    const evaluatePackageCell = (
+    // A. Evaluasi Sel Pengadaan (Procurement)
+    const evaluateProcurementCell = (
+      pkg: GanttPackageItem,
+      week: WeekInfo
+    ): CellData => {
+      const wStart = week.startDate.getTime();
+      const wEnd = week.endDate.getTime();
+
+      // Tanggal Rencana Pengadaan (fallback cerdas ke planStartDate jika kategori MATERIAL)
+      const pStart = pkg.procurementPlanStartDate
+        ? new Date(pkg.procurementPlanStartDate).getTime()
+        : pkg.category === PackageCategory.MATERIAL && pkg.planStartDate
+        ? new Date(pkg.planStartDate).getTime()
+        : pkg.prUspkDate
+        ? new Date(pkg.prUspkDate).getTime()
+        : pkg.poSpkDate
+        ? new Date(pkg.poSpkDate).getTime()
+        : null;
+
+      const pEnd = pkg.procurementPlanEndDate
+        ? new Date(pkg.procurementPlanEndDate).getTime()
+        : pkg.category === PackageCategory.MATERIAL && pkg.planEndDate
+        ? new Date(pkg.planEndDate).getTime()
+        : pkg.estDeliveryDate
+        ? new Date(pkg.estDeliveryDate).getTime()
+        : null;
+
+      const rEnd = pkg.procurementRevisedEndDate
+        ? new Date(pkg.procurementRevisedEndDate).getTime()
+        : null;
+
+      const isDelivered =
+        pkg.status === PackageStatus.DELIVERED ||
+        pkg.status === PackageStatus.COMPLETED;
+
+      // 1) Rencana (Plan): irisan dengan [pStart, pEnd]
+      const isPlan = Boolean(pStart && pEnd && !(wEnd < pStart || wStart > pEnd));
+
+      // 2) Keterlambatan / Target Revisi Pengadaan
+      let isRevised = false;
+      if (pEnd && rEnd && rEnd > pEnd) {
+        const isRevisedRange = !(wEnd <= pEnd || wStart > rEnd);
+        if (isRevisedRange) {
+          isRevised = true;
+        }
+      }
+
+      // 3) Menentukan warna sel
+      let styleType: CellStyleType = "EMPTY";
+      if (isRevised) {
+        const isRevisedEndWeek = Boolean(rEnd && wStart <= rEnd && rEnd <= wEnd);
+        styleType = isRevisedEndWeek ? "THIS_WEEK_REVISED" : "REVISED";
+      } else if (isPlan) {
+        styleType = "PLAN";
+      }
+
+      // 4) Menentukan simbol di dalam sel
+      let symbol = "";
+      const aDelivery = pkg.actualDeliveryDate
+        ? new Date(pkg.actualDeliveryDate).getTime()
+        : null;
+      const targetFinishTs = aDelivery || rEnd || pEnd;
+
+      // Simbol Selesai (✓) saat barang tiba lengkap (DELIVERED)
+      if (isDelivered) {
+        if (targetFinishTs && wStart <= targetFinishTs && targetFinishTs <= wEnd) {
+          symbol = "✓";
+        } else if (!targetFinishTs && isPlan && wEnd >= (pEnd || 0)) {
+          symbol = "✓";
+        }
+      }
+
+      // Simbol Progres (#) saat PO terbit atau proses pengadaan aktif
+      const poStart = pkg.poSpkDate
+        ? new Date(pkg.poSpkDate).getTime()
+        : pkg.prUspkDate
+        ? new Date(pkg.prUspkDate).getTime()
+        : null;
+
+      const isProcActive =
+        Boolean(poStart) ||
+        ["PR_SUBMITTED", "PO_ISSUED", "IN_DELIVERY", "PARTIALLY_DELIVERED"].includes(pkg.status);
+
+      if (!symbol && isProcActive) {
+        const activeStart = poStart || pStart;
+        const activeEnd = isDelivered ? (targetFinishTs || now.getTime()) : now.getTime();
+        if (activeStart && wEnd >= activeStart && wStart <= activeEnd) {
+          symbol = "#";
+        }
+      }
+
+      let tooltipDesc = "Di luar jadwal pengadaan";
+      if (styleType === "THIS_WEEK_REVISED") {
+        tooltipDesc = "Target Revisi Pengadaan (Minggu Berjalan)";
+      } else if (styleType === "REVISED") {
+        tooltipDesc = "Target Revisi Pengadaan";
+      } else if (styleType === "PLAN") {
+        tooltipDesc = "Jadwal Rencana Pengadaan";
+      }
+
+      if (symbol === "✓") {
+        tooltipDesc += " - Barang/Material Tiba Lengkap (DELIVERED)";
+      } else if (symbol === "#") {
+        tooltipDesc += " - Realisasi Pengadaan / PO Berjalan";
+      }
+
+      return {
+        styleType,
+        symbol,
+        tooltipText: `${pkg.packageName} - Pengadaan (${week.label}): ${tooltipDesc}`,
+      };
+    };
+
+    // B. Evaluasi Sel Pekerjaan Fisik (Physical / Installation Work)
+    const evaluatePhysicalCell = (
       pkg: GanttPackageItem,
       week: WeekInfo
     ): CellData => {
@@ -206,22 +326,17 @@ export function ProjectMatrixGanttChart({
       const pEnd = pkg.planEndDate ? new Date(pkg.planEndDate).getTime() : null;
       const aStart = pkg.actualStartDate ? new Date(pkg.actualStartDate).getTime() : null;
       const aEnd = pkg.actualEndDate ? new Date(pkg.actualEndDate).getTime() : null;
+      const rEnd = pkg.revisedEndDate ? new Date(pkg.revisedEndDate).getTime() : null;
 
-      const isCompleted =
-        pkg.progressPct >= 100 ||
-        pkg.status === "COMPLETED" ||
-        pkg.status === "DELIVERED";
+      // Aturan Mutlak: Realisasi Fisik HARUS 100% baru checklist (✓)
+      const isCompleted = pkg.progressPct >= 100;
 
       // 1) Rencana (Plan): irisan dengan [pStart, pEnd]
       const isPlan = Boolean(pStart && pEnd && !(wEnd < pStart || wStart > pEnd));
 
-      // 2) Keterlambatan / Target Revisi:
-      // Hanya aktif jika user secara sadar menginput perubahan jadwal (revisedEndDate)
-      const rEnd = pkg.revisedEndDate ? new Date(pkg.revisedEndDate).getTime() : null;
+      // 2) Keterlambatan / Target Revisi Fisik
       let isRevised = false;
-
       if (pEnd && rEnd && rEnd > pEnd) {
-        // Rentang revisi adalah setelah batas pEnd sampai dengan rEnd
         const isRevisedRange = !(wEnd <= pEnd || wStart > rEnd);
         if (isRevisedRange) {
           isRevised = true;
@@ -231,21 +346,16 @@ export function ProjectMatrixGanttChart({
       // 3) Menentukan warna sel
       let styleType: CellStyleType = "EMPTY";
       if (isRevised) {
-        // Warna oranye PASTI SELALU di akhir (minggu terakhir tanggal revisi target)
         const isRevisedEndWeek = Boolean(rEnd && wStart <= rEnd && rEnd <= wEnd);
-        if (isRevisedEndWeek) {
-          styleType = "THIS_WEEK_REVISED"; // Oranye
-        } else {
-          styleType = "REVISED"; // Kuning
-        }
+        styleType = isRevisedEndWeek ? "THIS_WEEK_REVISED" : "REVISED";
       } else if (isPlan) {
-        styleType = "PLAN"; // Abu-abu
+        styleType = "PLAN";
       }
 
       // 4) Menentukan simbol di dalam sel
       let symbol = "";
 
-      // Simbol Selesai (✓)
+      // Simbol Selesai (✓) HANYA jika fisik mencapai 100%
       if (isCompleted) {
         const targetFinishTs = aEnd || rEnd || pEnd;
         if (targetFinishTs && wStart <= targetFinishTs && targetFinishTs <= wEnd) {
@@ -255,7 +365,7 @@ export function ProjectMatrixGanttChart({
         }
       }
 
-      // Simbol Progres (#)
+      // Simbol Progres (#) saat ada progres fisik berjalan
       if (!symbol && (pkg.progressPct > 0 || (aStart && aStart <= wEnd))) {
         const activeStart = aStart || pStart;
         const activeEnd = isCompleted ? (aEnd || rEnd || pEnd || now.getTime()) : now.getTime();
@@ -265,25 +375,25 @@ export function ProjectMatrixGanttChart({
         }
       }
 
-      let tooltipDesc = "Di luar jadwal";
+      let tooltipDesc = "Di luar jadwal pelaksanaan";
       if (styleType === "THIS_WEEK_REVISED") {
-        tooltipDesc = "Target Revisi (Minggu Berjalan)";
+        tooltipDesc = "Target Revisi Fisik (Minggu Berjalan)";
       } else if (styleType === "REVISED") {
-        tooltipDesc = "Target Revisi";
+        tooltipDesc = "Target Revisi Fisik";
       } else if (styleType === "PLAN") {
-        tooltipDesc = "Jadwal Rencana (Plan)";
+        tooltipDesc = "Jadwal Rencana Fisik (Plan)";
       }
 
       if (symbol === "✓") {
-        tooltipDesc += " - Pekerjaan Selesai";
+        tooltipDesc += " - Pekerjaan Fisik Selesai 100%";
       } else if (symbol === "#") {
-        tooltipDesc += ` - Progres Berjalan (${pkg.progressPct}%)`;
+        tooltipDesc += ` - Progres Fisik Berjalan (${pkg.progressPct}%)`;
       }
 
       return {
         styleType,
         symbol,
-        tooltipText: `${pkg.packageName} (${week.label}): ${tooltipDesc}`,
+        tooltipText: `${pkg.packageName} - Fisik (${week.label}): ${tooltipDesc}`,
       };
     };
 
@@ -482,14 +592,73 @@ export function ProjectMatrixGanttChart({
     const categories = Array.from(map.keys());
     categories.forEach((cat) => {
       const pkgs = map.get(cat) || [];
-      const packageItems: MatrixRowItem[] = pkgs.map((pkg, i) => ({
-        id: pkg.id,
-        itemIndex: String.fromCharCode(97 + (i % 26)),
-        packageName: pkg.packageName,
-        planStartDate: pkg.planStartDate,
-        planEndDate: pkg.planEndDate,
-        evaluateCell: (week: WeekInfo) => evaluatePackageCell(pkg, week),
-      }));
+      const packageItems: MatrixRowItem[] = [];
+      let itemCounter = 0;
+
+      pkgs.forEach((pkg) => {
+        const hasPhysical = pkg.hasPhysicalWork !== false;
+
+        // Tanggal Rencana Pengadaan (fallback cerdas ke planStartDate jika kategori MATERIAL)
+        const pProcStart = pkg.procurementPlanStartDate
+          ? pkg.procurementPlanStartDate
+          : cat === PackageCategory.MATERIAL && pkg.planStartDate
+          ? pkg.planStartDate
+          : pkg.prUspkDate || pkg.poSpkDate || null;
+
+        const pProcEnd = pkg.procurementPlanEndDate
+          ? pkg.procurementPlanEndDate
+          : cat === PackageCategory.MATERIAL && pkg.planEndDate
+          ? pkg.planEndDate
+          : pkg.estDeliveryDate || null;
+
+        if (hasPhysical) {
+          // Sub-baris 1: Proses Pengadaan
+          const procLetter = String.fromCharCode(97 + (itemCounter++ % 26));
+          packageItems.push({
+            id: `${pkg.id}-procurement`,
+            itemIndex: procLetter,
+            packageName:
+              pkgs.length > 1
+                ? `${pkg.packageName} (Pengadaan)`
+                : `${pkg.packageName} - Pengadaan`,
+            subLabel: pkg.noPoSpk
+              ? `PO: ${pkg.noPoSpk}`
+              : pkg.noPrUspk
+              ? `PR: ${pkg.noPrUspk}`
+              : undefined,
+            planStartDate: pProcStart,
+            planEndDate: pProcEnd,
+            evaluateCell: (week: WeekInfo) => evaluateProcurementCell(pkg, week),
+          });
+
+          // Sub-baris 2: Pekerjaan Fisik / Installasi
+          const physLetter = String.fromCharCode(97 + (itemCounter++ % 26));
+          packageItems.push({
+            id: `${pkg.id}-physical`,
+            itemIndex: physLetter,
+            packageName:
+              pkgs.length > 1
+                ? `${pkg.packageName} (Pekerjaan Fisik)`
+                : `${pkg.packageName} - Fisik / Installasi`,
+            subLabel: `Realisasi Fisik: ${pkg.progressPct}%`,
+            planStartDate: pkg.planStartDate,
+            planEndDate: pkg.planEndDate,
+            evaluateCell: (week: WeekInfo) => evaluatePhysicalCell(pkg, week),
+          });
+        } else {
+          // Hanya Pengadaan
+          const procLetter = String.fromCharCode(97 + (itemCounter++ % 26));
+          packageItems.push({
+            id: `${pkg.id}-procurement`,
+            itemIndex: procLetter,
+            packageName: pkg.packageName,
+            subLabel: pkg.noPoSpk ? `PO: ${pkg.noPoSpk}` : undefined,
+            planStartDate: pProcStart,
+            planEndDate: pProcEnd,
+            evaluateCell: (week: WeekInfo) => evaluateProcurementCell(pkg, week),
+          });
+        }
+      });
 
       list.push({
         id: `cat-${cat}`,

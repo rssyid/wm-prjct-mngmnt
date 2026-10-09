@@ -48,8 +48,13 @@ interface WorkPackageRow {
   contractOrPoAmount: number | string;
   estDeliveryDate?: string | null;
   actualDeliveryDate?: string | null;
+  procurementPlanStartDate?: string | null;
+  procurementPlanEndDate?: string | null;
+  procurementRevisedEndDate?: string | null;
+  hasPhysicalWork?: boolean;
   planStartDate?: string | null;
   planEndDate?: string | null;
+  revisedEndDate?: string | null;
   deliveryDelayDays?: number;
   isDelayed?: boolean;
   totalPlannedQty?: number;

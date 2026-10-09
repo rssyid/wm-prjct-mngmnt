@@ -60,6 +60,7 @@ export interface WorkPackageOption {
   id: string;
   packageName: string;
   category?: PackageCategory;
+  hasPhysicalWork?: boolean;
   targetQuantity?: number | null;
   uom?: string | null;
   volumeAchieved?: number | null;
@@ -548,7 +549,9 @@ export function EquipmentLogTable({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">-- Tanpa Paket Spesifik (Umum) --</SelectItem>
-                  {workPackages.map((wp) => {
+                  {workPackages
+                    .filter((wp) => wp.hasPhysicalWork !== false)
+                    .map((wp) => {
                     const wpQty =
                       wp.targetQuantity !== null && wp.targetQuantity !== undefined
                         ? wp.targetQuantity

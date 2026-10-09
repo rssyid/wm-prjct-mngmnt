@@ -42,6 +42,10 @@ interface PackageFormDialogProps {
     noPoSpk?: string | null;
     poSpkDate?: string | null;
     estDeliveryDate?: string | null;
+    procurementPlanStartDate?: string | null;
+    procurementPlanEndDate?: string | null;
+    procurementRevisedEndDate?: string | null;
+    hasPhysicalWork?: boolean;
     planStartDate?: string | null;
     planEndDate?: string | null;
     revisedEndDate?: string | null;
@@ -86,6 +90,10 @@ export function PackageFormDialog({
   const [noPoSpk, setNoPoSpk] = useState("");
   const [poSpkDate, setPoSpkDate] = useState("");
   const [estDeliveryDate, setEstDeliveryDate] = useState("");
+  const [procurementPlanStartDate, setProcurementPlanStartDate] = useState("");
+  const [procurementPlanEndDate, setProcurementPlanEndDate] = useState("");
+  const [procurementRevisedEndDate, setProcurementRevisedEndDate] = useState("");
+  const [hasPhysicalWork, setHasPhysicalWork] = useState(true);
   const [planStartDate, setPlanStartDate] = useState("");
   const [planEndDate, setPlanEndDate] = useState("");
   const [revisedEndDate, setRevisedEndDate] = useState("");
@@ -159,6 +167,24 @@ export function PackageFormDialog({
             ? new Date(initialData.estDeliveryDate).toISOString().split("T")[0]
             : ""
         );
+        setProcurementPlanStartDate(
+          initialData.procurementPlanStartDate
+            ? new Date(initialData.procurementPlanStartDate).toISOString().split("T")[0]
+            : ""
+        );
+        setProcurementPlanEndDate(
+          initialData.procurementPlanEndDate
+            ? new Date(initialData.procurementPlanEndDate).toISOString().split("T")[0]
+            : ""
+        );
+        setProcurementRevisedEndDate(
+          initialData.procurementRevisedEndDate
+            ? new Date(initialData.procurementRevisedEndDate).toISOString().split("T")[0]
+            : ""
+        );
+        setHasPhysicalWork(
+          initialData.hasPhysicalWork !== undefined ? Boolean(initialData.hasPhysicalWork) : true
+        );
         setPlanStartDate(
           initialData.planStartDate
             ? new Date(initialData.planStartDate).toISOString().split("T")[0]
@@ -189,6 +215,10 @@ export function PackageFormDialog({
         setNoPoSpk("");
         setPoSpkDate("");
         setEstDeliveryDate("");
+        setProcurementPlanStartDate("");
+        setProcurementPlanEndDate("");
+        setProcurementRevisedEndDate("");
+        setHasPhysicalWork(true);
         setPlanStartDate("");
         setPlanEndDate("");
         setRevisedEndDate("");
@@ -213,22 +243,42 @@ export function PackageFormDialog({
         }
       }
 
-      if (planStartDate && planEndDate) {
-        const dStart = new Date(planStartDate);
-        const dEnd = new Date(planEndDate);
+      if (procurementPlanStartDate && procurementPlanEndDate) {
+        const dStart = new Date(procurementPlanStartDate);
+        const dEnd = new Date(procurementPlanEndDate);
         if (dStart > dEnd) {
           throw new Error(
-            "Estimasi tanggal mulai harus lebih awal atau sama dengan estimasi tanggal selesai"
+            "Rencana mulai pengadaan harus lebih awal atau sama dengan rencana selesai pengadaan"
           );
         }
       }
 
-      if (planStartDate && revisedEndDate) {
+      if (procurementPlanStartDate && procurementRevisedEndDate) {
+        const dStart = new Date(procurementPlanStartDate);
+        const dRev = new Date(procurementRevisedEndDate);
+        if (dStart > dRev) {
+          throw new Error(
+            "Target revisi pengadaan harus lebih lambat atau sama dengan rencana mulai pengadaan"
+          );
+        }
+      }
+
+      if (hasPhysicalWork && planStartDate && planEndDate) {
+        const dStart = new Date(planStartDate);
+        const dEnd = new Date(planEndDate);
+        if (dStart > dEnd) {
+          throw new Error(
+            "Estimasi tanggal mulai fisik harus lebih awal atau sama dengan estimasi tanggal selesai fisik"
+          );
+        }
+      }
+
+      if (hasPhysicalWork && planStartDate && revisedEndDate) {
         const dStart = new Date(planStartDate);
         const dRev = new Date(revisedEndDate);
         if (dStart > dRev) {
           throw new Error(
-            "Target tanggal revisi harus lebih lambat atau sama dengan tanggal mulai"
+            "Target tanggal revisi fisik harus lebih lambat atau sama dengan tanggal mulai fisik"
           );
         }
       }
@@ -248,9 +298,13 @@ export function PackageFormDialog({
         noPoSpk: noPoSpk.trim() || null,
         poSpkDate: poSpkDate || null,
         estDeliveryDate: estDeliveryDate || null,
-        planStartDate: planStartDate || null,
-        planEndDate: planEndDate || null,
-        revisedEndDate: revisedEndDate || null,
+        procurementPlanStartDate: procurementPlanStartDate || null,
+        procurementPlanEndDate: procurementPlanEndDate || null,
+        procurementRevisedEndDate: procurementRevisedEndDate || null,
+        hasPhysicalWork,
+        planStartDate: hasPhysicalWork ? (planStartDate || null) : null,
+        planEndDate: hasPhysicalWork ? (planEndDate || null) : null,
+        revisedEndDate: hasPhysicalWork ? (revisedEndDate || null) : null,
         contractOrPoAmount: parseFloat(contractOrPoAmount) || 0,
         remarks: remarks.trim() || null,
       };
@@ -443,10 +497,69 @@ export function PackageFormDialog({
             </div>
           </div>
 
-          {/* Bagian Tahap PR & PO */}
+          {/* Bagian 1: Jadwal Rencana Pengadaan (Gantt Chart) */}
+          <div className="rounded-md border p-3 bg-muted/20 space-y-3">
+            <div>
+              <h4 className="font-semibold text-foreground text-xs flex items-center justify-between">
+                <span>1. Jadwal Rencana Pengadaan (Gantt Chart)</span>
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  Rencana Waktu Pengadaan
+                </span>
+              </h4>
+              <p className="text-[11px] text-muted-foreground">
+                Estimasi periode mulai dan selesai proses pengadaan barang/PO untuk timeline Gantt.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="procurementPlanStartDate" className="text-xs">
+                  Rencana Mulai Pengadaan
+                </Label>
+                <Input
+                  id="procurementPlanStartDate"
+                  type="date"
+                  value={procurementPlanStartDate}
+                  onChange={(e) => setProcurementPlanStartDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="procurementPlanEndDate" className="text-xs">
+                  Rencana Selesai Pengadaan
+                </Label>
+                <Input
+                  id="procurementPlanEndDate"
+                  type="date"
+                  value={procurementPlanEndDate}
+                  onChange={(e) => setProcurementPlanEndDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2 pt-2 border-t border-border/60">
+                <Label htmlFor="procurementRevisedEndDate" className="text-xs flex items-center justify-between">
+                  <span className="font-semibold text-amber-700 dark:text-amber-400">
+                    Target Selesai Pengadaan Revisi
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-normal">
+                    (Opsional)
+                  </span>
+                </Label>
+                <Input
+                  id="procurementRevisedEndDate"
+                  type="date"
+                  value={procurementRevisedEndDate}
+                  onChange={(e) => setProcurementRevisedEndDate(e.target.value)}
+                  className="border-amber-300 dark:border-amber-800/70 focus-visible:ring-amber-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bagian 2: Tahap Realisasi Administrasi (PR, PO & Pengiriman) */}
           <div className="rounded-md border p-3 bg-muted/20 space-y-3">
             <h4 className="font-semibold text-foreground text-xs">
-              Tahap Administrasi (PR & PO)
+              2. Tahap Realisasi Administrasi (PR, PO &amp; Tiba Barang)
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -488,7 +601,7 @@ export function PackageFormDialog({
 
               <div className="space-y-1.5">
                 <Label htmlFor="poSpkDate" className="text-xs">
-                  Tanggal PO / SPK
+                  Tanggal PO / SPK (Realisasi Mulai Pengadaan)
                 </Label>
                 <Input
                   id="poSpkDate"
@@ -525,63 +638,77 @@ export function PackageFormDialog({
             </div>
           </div>
 
-          {/* Bagian Jadwal Pelaksanaan (Gantt Chart) */}
+          {/* Bagian 3: Pekerjaan Fisik / Installasi Lapangan (Gantt Chart) */}
           <div className="rounded-md border p-3 bg-muted/20 space-y-3">
-            <div>
-              <h4 className="font-semibold text-foreground text-xs">
-                Jadwal Pelaksanaan (Gantt Chart)
-              </h4>
-              <p className="text-[11px] text-muted-foreground">
-                Estimasi periode mulai dan selesai pengerjaan paket untuk timeline Gantt.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="planStartDate" className="text-xs">
-                  Estimasi Tanggal Mulai (Plan Start)
+            <div className="flex items-start gap-2.5 p-2 rounded-md bg-background border border-border">
+              <input
+                type="checkbox"
+                id="hasPhysicalWorkCheckbox"
+                checked={hasPhysicalWork}
+                onChange={(e) => setHasPhysicalWork(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+              />
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="hasPhysicalWorkCheckbox"
+                  className="text-xs font-semibold cursor-pointer select-none"
+                >
+                  3. Paket ini melibatkan pekerjaan fisik / installasi di lapangan
                 </Label>
-                <Input
-                  id="planStartDate"
-                  type="date"
-                  value={planStartDate}
-                  onChange={(e) => setPlanStartDate(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="planEndDate" className="text-xs">
-                  Estimasi Tanggal Selesai (Plan End)
-                </Label>
-                <Input
-                  id="planEndDate"
-                  type="date"
-                  value={planEndDate}
-                  onChange={(e) => setPlanEndDate(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5 md:col-span-2 pt-2 border-t border-border/60">
-                <Label htmlFor="revisedEndDate" className="text-xs flex items-center justify-between">
-                  <span className="font-semibold text-amber-700 dark:text-amber-400">
-                    Target Selesai Revisi (Bila Ada Perubahan Jadwal)
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-normal">
-                    (Opsional)
-                  </span>
-                </Label>
-                <Input
-                  id="revisedEndDate"
-                  type="date"
-                  value={revisedEndDate}
-                  onChange={(e) => setRevisedEndDate(e.target.value)}
-                  className="border-amber-300 dark:border-amber-800/70 focus-visible:ring-amber-500"
-                />
-                <p className="text-[10px] text-muted-foreground leading-tight">
-                  Diisi hanya jika ada perubahan/adendum jadwal resmi. Akan memunculkan warna target revisi (kuning &amp; oranye) pada visualisasi matriks Gantt.
+                <p className="text-[11px] text-muted-foreground">
+                  Centang jika paket ini mencakup aktivitas fisik di lapangan yang perlu dicatat di Log Harian Alat Berat / Log Realisasi Mingguan.
                 </p>
               </div>
             </div>
+
+            {hasPhysicalWork && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="planStartDate" className="text-xs">
+                    Estimasi Tanggal Mulai Fisik (Plan Start)
+                  </Label>
+                  <Input
+                    id="planStartDate"
+                    type="date"
+                    value={planStartDate}
+                    onChange={(e) => setPlanStartDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="planEndDate" className="text-xs">
+                    Estimasi Tanggal Selesai Fisik (Plan End)
+                  </Label>
+                  <Input
+                    id="planEndDate"
+                    type="date"
+                    value={planEndDate}
+                    onChange={(e) => setPlanEndDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2 pt-2 border-t border-border/60">
+                  <Label htmlFor="revisedEndDate" className="text-xs flex items-center justify-between">
+                    <span className="font-semibold text-amber-700 dark:text-amber-400">
+                      Target Selesai Fisik Revisi (Bila Ada Perubahan Jadwal)
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      (Opsional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="revisedEndDate"
+                    type="date"
+                    value={revisedEndDate}
+                    onChange={(e) => setRevisedEndDate(e.target.value)}
+                    className="border-amber-300 dark:border-amber-800/70 focus-visible:ring-amber-500"
+                  />
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Diisi hanya jika ada perubahan/adendum jadwal fisik resmi. Akan memunculkan warna target revisi (kuning &amp; oranye) pada visualisasi matriks Gantt.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

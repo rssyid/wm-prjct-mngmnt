@@ -69,6 +69,10 @@ export const packageCreateSchema = z
       .min(0, "Nilai kontrak/PO tidak boleh negatif")
       .default(0),
     estDeliveryDate: emptyDateToNull,
+    procurementPlanStartDate: emptyDateToNull,
+    procurementPlanEndDate: emptyDateToNull,
+    procurementRevisedEndDate: emptyDateToNull,
+    hasPhysicalWork: z.boolean().default(true),
     planStartDate: emptyDateToNull,
     planEndDate: emptyDateToNull,
     actualStartDate: emptyDateToNull,
@@ -92,6 +96,30 @@ export const packageCreateSchema = z
     {
       message: "Tanggal PR/USPK harus lebih awal atau sama dengan tanggal PO/SPK",
       path: ["poSpkDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.procurementPlanStartDate && data.procurementPlanEndDate) {
+        return data.procurementPlanStartDate <= data.procurementPlanEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Rencana mulai pengadaan harus lebih awal atau sama dengan rencana selesai pengadaan",
+      path: ["procurementPlanEndDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.procurementPlanStartDate && data.procurementRevisedEndDate) {
+        return data.procurementPlanStartDate <= data.procurementRevisedEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Target revisi pengadaan harus lebih lambat atau sama dengan rencana mulai pengadaan",
+      path: ["procurementRevisedEndDate"],
     }
   )
   .refine(
@@ -147,6 +175,10 @@ export const packageUpdateSchema = z
       .min(0, "Nilai kontrak/PO tidak boleh negatif")
       .optional(),
     estDeliveryDate: emptyDateToNull.optional(),
+    procurementPlanStartDate: emptyDateToNull.optional(),
+    procurementPlanEndDate: emptyDateToNull.optional(),
+    procurementRevisedEndDate: emptyDateToNull.optional(),
+    hasPhysicalWork: z.boolean().optional(),
     planStartDate: emptyDateToNull.optional(),
     planEndDate: emptyDateToNull.optional(),
     actualStartDate: emptyDateToNull.optional(),
@@ -168,6 +200,30 @@ export const packageUpdateSchema = z
     {
       message: "Tanggal PR/USPK harus lebih awal atau sama dengan tanggal PO/SPK",
       path: ["poSpkDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.procurementPlanStartDate && data.procurementPlanEndDate) {
+        return data.procurementPlanStartDate <= data.procurementPlanEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Rencana mulai pengadaan harus lebih awal atau sama dengan rencana selesai pengadaan",
+      path: ["procurementPlanEndDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.procurementPlanStartDate && data.procurementRevisedEndDate) {
+        return data.procurementPlanStartDate <= data.procurementRevisedEndDate;
+      }
+      return true;
+    },
+    {
+      message: "Target revisi pengadaan harus lebih lambat atau sama dengan rencana mulai pengadaan",
+      path: ["procurementRevisedEndDate"],
     }
   )
   .refine(

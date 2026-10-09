@@ -24,6 +24,16 @@ export interface GanttPackageItem {
   weightPct: number;
   progressPct: number;
   status: PackageStatus;
+  noPoSpk?: string | null;
+  noPrUspk?: string | null;
+  poSpkDate?: string | Date | null;
+  prUspkDate?: string | Date | null;
+  estDeliveryDate?: string | Date | null;
+  actualDeliveryDate?: string | Date | null;
+  procurementPlanStartDate?: string | Date | null;
+  procurementPlanEndDate?: string | Date | null;
+  procurementRevisedEndDate?: string | Date | null;
+  hasPhysicalWork?: boolean;
   planStartDate?: string | Date | null;
   planEndDate?: string | Date | null;
   actualStartDate?: string | Date | null;

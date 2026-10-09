@@ -527,6 +527,12 @@ model WorkPackage {
   paymentStatus      PaymentStatus   @default(BELUM_LUNAS)
   paidAmount         Decimal?        @db.Decimal(18, 2)
   paidDate           DateTime?
+  /// Jadwal Rencana Pengadaan (Gantt Chart)
+  procurementPlanStartDate  DateTime?
+  procurementPlanEndDate    DateTime?
+  procurementRevisedEndDate DateTime?
+  /// Flag apakah paket mencakup pekerjaan fisik / installasi di lapangan
+  hasPhysicalWork           Boolean         @default(true)
   planStartDate      DateTime?
   planEndDate        DateTime?
   actualStartDate    DateTime?

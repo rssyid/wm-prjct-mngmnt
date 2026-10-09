@@ -613,23 +613,41 @@ export default function ProjectDetailPage({
 
             {/* Tab Navigasi Modul */}
             <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList className="bg-muted/60 p-1">
-                <TabsTrigger value="overview" className="text-xs">
+              <TabsList className="h-11 sm:h-12 p-1.5 gap-1.5 bg-muted/80 border border-border/80 rounded-xl shadow-xs">
+                <TabsTrigger
+                  value="overview"
+                  className="text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+                >
                   Ikhtisar
                 </TabsTrigger>
-                <TabsTrigger value="timeline" className="text-xs">
+                <TabsTrigger
+                  value="timeline"
+                  className="text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+                >
                   Timeline
                 </TabsTrigger>
-                <TabsTrigger value="afce" className="text-xs">
+                <TabsTrigger
+                  value="afce"
+                  className="text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+                >
                   AFCE & AR
                 </TabsTrigger>
-                <TabsTrigger value="packages" className="text-xs">
+                <TabsTrigger
+                  value="packages"
+                  className="text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+                >
                   Paket Pengadaan
                 </TabsTrigger>
-                <TabsTrigger value="progress" className="text-xs">
+                <TabsTrigger
+                  value="progress"
+                  className="text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+                >
                   Realisasi
                 </TabsTrigger>
-                <TabsTrigger value="bast" className="text-xs">
+                <TabsTrigger
+                  value="bast"
+                  className="text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+                >
                   BAST
                 </TabsTrigger>
               </TabsList>

@@ -251,10 +251,11 @@ export function RealizationTab({
             </Card>
           ) : (
             <div className="space-y-6">
-              {packages.map((wp) => (
+              {packages.map((wp, index) => (
                 <WorkPackageProgressCard
                   key={wp.id}
                   workPackage={wp}
+                  colorIndex={index}
                   projectId={projectId}
                   currentWeek={currentWeek}
                   isCompleted={isCompleted}
