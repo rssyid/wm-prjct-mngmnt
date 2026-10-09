@@ -749,14 +749,13 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                 <TableHeader className="bg-muted/40 text-[11px]">
                   <TableRow>
                     <TableHead className="w-10"></TableHead>
-                    <TableHead className="min-w-[190px]">Proyek & Perusahaan</TableHead>
-                    <TableHead className="min-w-[170px]">Paket Pekerjaan</TableHead>
-                    <TableHead className="min-w-[120px]">Vendor & PO</TableHead>
-                    <TableHead className="min-w-[110px]">Bobot & Progres</TableHead>
-                    <TableHead className="min-w-[110px]">Target vs Capaian</TableHead>
-                    <TableHead className="min-w-[100px]">Status & Bayar</TableHead>
-                    <TableHead className="min-w-[130px]">Jadwal Pengadaan</TableHead>
-                    <TableHead className="min-w-[130px]">Jadwal Fisik</TableHead>
+                    <TableHead className="min-w-[220px]">Proyek / Paket Pekerjaan</TableHead>
+                    <TableHead className="min-w-[150px]">Vendor & PO</TableHead>
+                    <TableHead className="min-w-[130px]">Bobot & Progres Fisik</TableHead>
+                    <TableHead className="min-w-[140px]">Target vs Capaian Volume</TableHead>
+                    <TableHead className="min-w-[150px]">Jadwal Pengadaan</TableHead>
+                    <TableHead className="min-w-[150px]">Jadwal Fisik</TableHead>
+                    <TableHead className="min-w-[110px]">Status Paket</TableHead>
                     <TableHead className="w-12 text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -772,14 +771,14 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                           onClick={() => toggleExpand(item.id)}
                           className="bg-muted/20 hover:bg-muted/40 cursor-pointer font-medium select-none"
                         >
-                          <TableCell className="text-center">
+                          <TableCell className="text-center align-middle">
                             {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              <ChevronDown className="h-4 w-4 text-muted-foreground inline-block" />
                             ) : (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <ChevronRight className="h-4 w-4 text-muted-foreground inline-block" />
                             )}
                           </TableCell>
-                          <TableCell colSpan={2}>
+                          <TableCell colSpan={2} className="align-middle py-2.5">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-foreground">
                                 {item.projectName}
@@ -803,9 +802,9 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell colSpan={2}>
+                          <TableCell colSpan={2} className="align-middle py-2.5">
                             <div className="flex items-center gap-3">
-                              <span className="text-[11px] text-muted-foreground">
+                              <span className="text-[11px] text-muted-foreground shrink-0">
                                 {wpCount} Paket Pekerjaan
                               </span>
                               <div className="flex items-center gap-2 flex-1 max-w-[140px]">
@@ -826,16 +825,18 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell colSpan={4}>
-                            <span className="text-[10px] text-muted-foreground">
-                              Target Selesai:{" "}
-                              {item.targetEndDate
-                                ? formatDayMonth(item.targetEndDate)
-                                : "-"}
-                            </span>
+                          <TableCell colSpan={3} className="align-middle py-2.5">
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <span>Target Selesai:</span>
+                              <span className="font-mono text-foreground font-medium">
+                                {item.targetEndDate
+                                  ? formatDayMonth(item.targetEndDate)
+                                  : "-"}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell
-                            className="text-center"
+                            className="text-center align-middle py-2.5"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Button
@@ -858,7 +859,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                             <TableRow className="bg-background">
                               <TableCell></TableCell>
                               <TableCell
-                                colSpan={9}
+                                colSpan={8}
                                 className="text-muted-foreground italic py-3 text-center"
                               >
                                 Belum ada paket pekerjaan pada proyek ini.
@@ -895,18 +896,21 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                   key={pkg.id}
                                   className="bg-background hover:bg-muted/15 border-b border-border/40"
                                 >
-                                  <TableCell></TableCell>
-                                  <TableCell className="pl-6">
-                                    <div className="text-[10px] text-muted-foreground">
-                                      ↳ Bagian Kerja
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
+                                  {/* Col 1: Empty for indent */}
+                                  <TableCell className="align-top py-2.5"></TableCell>
+
+                                  {/* Col 2: Paket Pekerjaan + Kategori & Tipe */}
+                                  <TableCell className="align-top py-2.5">
                                     <div className="space-y-1">
-                                      <span className="font-semibold text-foreground">
-                                        {pkg.packageName}
-                                      </span>
-                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                      <div className="flex items-start gap-1.5">
+                                        <span className="text-muted-foreground font-mono text-xs select-none">
+                                          ↳
+                                        </span>
+                                        <span className="font-semibold text-foreground text-xs leading-snug">
+                                          {pkg.packageName}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 flex-wrap pl-3.5">
                                         <span className="text-[10px] text-muted-foreground font-mono">
                                           {PACKAGE_CATEGORY_CONFIG[pkg.category]
                                             ?.label || pkg.category}
@@ -929,9 +933,11 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                       </div>
                                     </div>
                                   </TableCell>
-                                  <TableCell>
-                                    <div className="space-y-0.5">
-                                      <span className="text-[11px] text-muted-foreground truncate max-w-[130px] block">
+
+                                  {/* Col 3: Vendor, PO & Status Bayar */}
+                                  <TableCell className="align-top py-2.5">
+                                    <div className="space-y-1">
+                                      <span className="text-[11px] font-medium text-foreground truncate max-w-[140px] block" title={pkg.vendorName}>
                                         {pkg.vendorName}
                                       </span>
                                       {pkg.noPoSpk && (
@@ -944,11 +950,24 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                             : ""}
                                         </span>
                                       )}
+                                      <div>
+                                        <Badge
+                                          variant="outline"
+                                          className={`text-[9px] px-1.5 py-0 h-3.5 border ${
+                                            payStatusCfg?.badgeClass || ""
+                                          }`}
+                                        >
+                                          {payStatusCfg?.label ||
+                                            pkg.paymentStatus}
+                                        </Badge>
+                                      </div>
                                     </div>
                                   </TableCell>
-                                  <TableCell>
+
+                                  {/* Col 4: Bobot & Progres Fisik */}
+                                  <TableCell className="align-top py-2.5">
                                     {pkg.hasPhysicalWork !== false ? (
-                                      <div className="space-y-1">
+                                      <div className="space-y-1.5">
                                         <div className="flex items-center justify-between text-[10px]">
                                           <span className="text-muted-foreground">
                                             Bobot: {pkg.weightPct}%
@@ -957,9 +976,9 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                             {pkg.progressPct}%
                                           </span>
                                         </div>
-                                        <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
+                                        <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                                           <div
-                                            className="bg-emerald-500 h-1 rounded-full"
+                                            className="bg-emerald-500 h-1.5 rounded-full"
                                             style={{
                                               width: `${Math.min(
                                                 100,
@@ -980,113 +999,135 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                       </div>
                                     )}
                                   </TableCell>
-                                  <TableCell>
-                                    <div className="text-[11px] font-mono">
-                                      {pkg.volumeAchieved ?? 0} /{" "}
-                                      {pkg.targetQuantity ?? "-"}{" "}
-                                      <span className="text-muted-foreground text-[10px]">
-                                        {pkg.uom || ""}
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="space-y-1">
-                                      <Badge
-                                        variant="outline"
-                                        className={`text-[9px] px-1.5 py-0 h-4 border ${
-                                          pkgStatusCfg?.badgeClass || ""
-                                        }`}
-                                      >
-                                        {pkgStatusCfg?.label || pkg.status}
-                                      </Badge>
-                                      <div>
-                                        <Badge
-                                          variant="outline"
-                                          className={`text-[9px] px-1.5 py-0 h-4 border ${
-                                            payStatusCfg?.badgeClass || ""
-                                          }`}
-                                        >
-                                          {payStatusCfg?.label ||
-                                            pkg.paymentStatus}
-                                        </Badge>
+
+                                  {/* Col 5: Target vs Capaian Volume + Tanggal Selesai / Masuk */}
+                                  <TableCell className="align-top py-2.5">
+                                    <div className="space-y-1.5">
+                                      <div className="text-[11px] font-mono font-medium">
+                                        {pkg.volumeAchieved ?? 0} /{" "}
+                                        {pkg.targetQuantity ?? "-"}{" "}
+                                        <span className="text-muted-foreground text-[10px]">
+                                          {pkg.uom || ""}
+                                        </span>
                                       </div>
-                                    </div>
-                                  </TableCell>
-                                  {/* Jadwal Pengadaan */}
-                                  <TableCell>
-                                    <div className="space-y-0.5 text-[10px]">
-                                      <div className="font-mono text-muted-foreground">
-                                        Plan: {procPlan}
-                                      </div>
-                                      {pkg.procurementRevisedEndDate && (
-                                        <div className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                                          Rev:{" "}
-                                          {formatDayMonth(
-                                            pkg.procurementRevisedEndDate
-                                          )}
-                                        </div>
-                                      )}
-                                      <div className="pt-0.5">
-                                        {pkg.isDelayed ? (
-                                          <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1">
-                                            <AlertTriangle className="h-3 w-3 shrink-0" />
-                                            Terlambat (
-                                            {pkg.estDeliveryDate
-                                              ? formatDayMonth(
-                                                  pkg.estDeliveryDate
-                                                )
-                                              : "-"}
-                                            )
-                                          </span>
-                                        ) : pkg.actualDeliveryDate ? (
-                                          <span className="text-emerald-600 dark:text-emerald-400">
-                                            Tiba:{" "}
-                                            {formatDayMonth(
-                                              pkg.actualDeliveryDate
-                                            )}
-                                          </span>
-                                        ) : pkg.estDeliveryDate ? (
-                                          <span className="text-muted-foreground">
-                                            Est:{" "}
-                                            {formatDayMonth(
-                                              pkg.estDeliveryDate
-                                            )}
-                                          </span>
+
+                                      {/* Realisasi Tanggal Selesai / Barang Masuk */}
+                                      <div className="space-y-0.5 text-[10px] font-mono pt-0.5 border-t border-border/40">
+                                        {pkg.hasPhysicalWork !== false ? (
+                                          <div className="grid grid-cols-[46px_1fr] items-baseline">
+                                            <span className="text-muted-foreground">Selesai</span>
+                                            <span className="text-foreground">
+                                              : {pkg.actualEndDate
+                                                ? formatDayMonth(pkg.actualEndDate)
+                                                : pkg.progressPct === 100
+                                                ? "Selesai"
+                                                : pkg.actualStartDate
+                                                ? "WIP"
+                                                : "-"}
+                                            </span>
+                                          </div>
                                         ) : (
-                                          <span className="text-muted-foreground">
-                                            -
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                  {/* Jadwal Fisik */}
-                                  <TableCell>
-                                    {pkg.hasPhysicalWork !== false ? (
-                                      <div className="space-y-0.5 text-[10px]">
-                                        <div className="font-mono text-muted-foreground">
-                                          Plan: {physPlan}
-                                        </div>
-                                        {pkg.revisedEndDate && (
-                                          <div className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                                            Rev:{" "}
-                                            {formatDayMonth(
-                                              pkg.revisedEndDate
-                                            )}
+                                          <div className="grid grid-cols-[46px_1fr] items-baseline">
+                                            <span className="text-muted-foreground">Masuk</span>
+                                            <span className="text-foreground">
+                                              : {pkg.actualDeliveryDate
+                                                ? formatDayMonth(pkg.actualDeliveryDate)
+                                                : "-"}
+                                            </span>
                                           </div>
                                         )}
-                                        {pkg.actualStartDate && (
-                                          <div className="font-mono text-emerald-600 dark:text-emerald-400">
-                                            Aktual:{" "}
-                                            {formatDayMonth(
-                                              pkg.actualStartDate
-                                            )}{" "}
-                                            -{" "}
-                                            {pkg.actualEndDate
-                                              ? formatDayMonth(
-                                                  pkg.actualEndDate
-                                                )
-                                              : "WIP"}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+
+                                  {/* Col 6: Jadwal Pengadaan (Plan, Rev, Tiba/Est/Terlambat dengan titik dua lurus) */}
+                                  <TableCell className="align-top py-2.5">
+                                    <div className="space-y-0.5 text-[10px] font-mono">
+                                      {/* Plan */}
+                                      <div className="grid grid-cols-[38px_1fr] items-baseline">
+                                        <span className="text-muted-foreground">Plan</span>
+                                        <span className="text-muted-foreground">: {procPlan}</span>
+                                      </div>
+
+                                      {/* Rev */}
+                                      {pkg.procurementRevisedEndDate && (
+                                        <div className="grid grid-cols-[38px_1fr] items-baseline text-amber-600 dark:text-amber-400 font-semibold">
+                                          <span>Rev</span>
+                                          <span>
+                                            : {formatDayMonth(pkg.procurementRevisedEndDate)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Tiba / Est / Terlambat */}
+                                      {pkg.isDelayed ? (
+                                        <div className="grid grid-cols-[38px_1fr] items-baseline text-rose-600 dark:text-rose-400 font-semibold">
+                                          <span>Est</span>
+                                          <span className="flex items-center gap-1">
+                                            : {pkg.estDeliveryDate
+                                              ? formatDayMonth(pkg.estDeliveryDate)
+                                              : "-"}{" "}
+                                            <span className="text-[9px] font-sans font-normal">(Telat)</span>
+                                          </span>
+                                        </div>
+                                      ) : pkg.actualDeliveryDate ? (
+                                        <div className="grid grid-cols-[38px_1fr] items-baseline text-emerald-600 dark:text-emerald-400">
+                                          <span>Tiba</span>
+                                          <span>
+                                            : {formatDayMonth(pkg.actualDeliveryDate)}
+                                          </span>
+                                        </div>
+                                      ) : pkg.estDeliveryDate ? (
+                                        <div className="grid grid-cols-[38px_1fr] items-baseline text-muted-foreground">
+                                          <span>Est</span>
+                                          <span>
+                                            : {formatDayMonth(pkg.estDeliveryDate)}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <div className="grid grid-cols-[38px_1fr] items-baseline text-muted-foreground">
+                                          <span>Tiba</span>
+                                          <span>: -</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+
+                                  {/* Col 7: Jadwal Fisik (Plan, Rev, Aktual dengan titik dua lurus) */}
+                                  <TableCell className="align-top py-2.5">
+                                    {pkg.hasPhysicalWork !== false ? (
+                                      <div className="space-y-0.5 text-[10px] font-mono">
+                                        {/* Plan */}
+                                        <div className="grid grid-cols-[44px_1fr] items-baseline">
+                                          <span className="text-muted-foreground">Plan</span>
+                                          <span className="text-muted-foreground">: {physPlan}</span>
+                                        </div>
+
+                                        {/* Rev */}
+                                        {pkg.revisedEndDate && (
+                                          <div className="grid grid-cols-[44px_1fr] items-baseline text-amber-600 dark:text-amber-400 font-semibold">
+                                            <span>Rev</span>
+                                            <span>
+                                              : {formatDayMonth(pkg.revisedEndDate)}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {/* Aktual */}
+                                        {pkg.actualStartDate ? (
+                                          <div className="grid grid-cols-[44px_1fr] items-baseline text-emerald-600 dark:text-emerald-400">
+                                            <span>Aktual</span>
+                                            <span>
+                                              : {formatDayMonth(pkg.actualStartDate)} -{" "}
+                                              {pkg.actualEndDate
+                                                ? formatDayMonth(pkg.actualEndDate)
+                                                : "WIP"}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <div className="grid grid-cols-[44px_1fr] items-baseline text-muted-foreground">
+                                            <span>Aktual</span>
+                                            <span>: -</span>
                                           </div>
                                         )}
                                       </div>
@@ -1096,7 +1137,21 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                       </span>
                                     )}
                                   </TableCell>
-                                  <TableCell></TableCell>
+
+                                  {/* Col 8: Status Paket */}
+                                  <TableCell className="align-top py-2.5">
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-[9px] px-1.5 py-0 h-4 border ${
+                                        pkgStatusCfg?.badgeClass || ""
+                                      }`}
+                                    >
+                                      {pkgStatusCfg?.label || pkg.status}
+                                    </Badge>
+                                  </TableCell>
+
+                                  {/* Col 9: Aksi */}
+                                  <TableCell className="align-top py-2.5 text-center"></TableCell>
                                 </TableRow>
                               );
                             })
