@@ -64,13 +64,13 @@ export function TextGenerateEffect({
       if (!scope.current) return;
 
       const totalWords = quoteWords.length + authorWords.length;
-      // Durasi total animasi kata awal sampai akhir persis 2 detik
-      const animationTotalTime = 2.0;
-      const wordAnimDuration = 0.4;
+      // Durasi total animasi kata awal sampai akhir persis 3 detik
+      const animationTotalTime = 3.0;
+      const wordAnimDuration = 0.5;
       const staggerDelay =
         totalWords > 1
           ? (animationTotalTime - wordAnimDuration) / (totalWords - 1)
-          : 0.1;
+          : 0.15;
 
       // 1. Reset kata ke blur dan transparan
       await animate(
@@ -84,7 +84,7 @@ export function TextGenerateEffect({
 
       if (!isMounted) return;
 
-      // 2. Animasi masuk kata per kata (total selesai dalam 2.0 detik)
+      // 2. Animasi masuk kata per kata (total selesai dalam 3.0 detik)
       await animate(
         ".word-span",
         {
@@ -99,8 +99,8 @@ export function TextGenerateEffect({
 
       if (!isMounted) return;
 
-      // 3. Diam selama 1 detik
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 3. Diam selama 3 detik
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       if (!isMounted) return;
 
