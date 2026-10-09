@@ -9,10 +9,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
+import { getDicebearAvatarUrl } from "@/lib/avatar";
 import {
   Dialog,
   DialogContent,
@@ -208,19 +210,33 @@ export function UserManagementClient({ currentUserId }: UserManagementClientProp
     {
       accessorKey: "name",
       header: "Nama Pengguna",
-      cell: ({ row }) => (
-        <div>
-          <div className="font-semibold text-foreground text-sm flex items-center space-x-2">
-            <span>{row.original.name}</span>
-            {row.original.id === currentUserId && (
-              <Badge variant="outline" className="text-[10px] h-4 px-1 border-primary text-primary">
-                Anda
-              </Badge>
-            )}
+      cell: ({ row }) => {
+        const initials = row.original.name.slice(0, 2).toUpperCase();
+        return (
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-8 w-8 border border-slate-200 dark:border-slate-800 shrink-0">
+              <AvatarImage
+                src={getDicebearAvatarUrl(row.original.name || row.original.email)}
+                alt={row.original.name}
+              />
+              <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="font-semibold text-foreground text-sm flex items-center space-x-2">
+                <span>{row.original.name}</span>
+                {row.original.id === currentUserId && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 border-primary text-primary">
+                    Anda
+                  </Badge>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground font-mono">{row.original.email}</div>
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground font-mono">{row.original.email}</div>
-        </div>
-      ),
+        );
+      },
     },
     {
       accessorKey: "role",

@@ -274,9 +274,9 @@ export function LoginForm() {
         </form>
       </div>
 
-      {/* Footer copyright */}
+      {/* Footer text */}
       <div className="w-full text-left text-xs text-slate-400 dark:text-slate-500">
-        © 2026 WM PRJCT MNGMNT. Hak cipta dilindungi.
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
       </div>
     </div>
   );
