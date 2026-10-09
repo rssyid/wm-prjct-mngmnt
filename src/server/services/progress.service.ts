@@ -234,11 +234,39 @@ export async function createProgressLog(
     });
 
     if (latestLog) {
+      // Cari log pertama yang memiliki progres > 0 untuk actualStartDate
+      const firstActiveLog = await tx.progressLog.findFirst({
+        where: {
+          workPackageId: data.workPackageId,
+          progressPct: { gt: 0 },
+          deletedAt: null,
+        },
+        orderBy: { weekNo: "asc" },
+      });
+
+      // Cari log saat mencapai progres >= 100 untuk actualEndDate
+      const completionLog = await tx.progressLog.findFirst({
+        where: {
+          workPackageId: data.workPackageId,
+          progressPct: { gte: 100 },
+          deletedAt: null,
+        },
+        orderBy: { weekNo: "asc" },
+      });
+
       await tx.workPackage.update({
         where: { id: data.workPackageId },
         data: {
           progressPct: latestLog.progressPct,
           volumeAchieved: latestLog.volumeAchieved || workPackage.volumeAchieved,
+          actualStartDate: firstActiveLog
+            ? firstActiveLog.logDate
+            : workPackage.actualStartDate,
+          actualEndDate: completionLog
+            ? completionLog.logDate
+            : latestLog.progressPct < 100
+            ? null
+            : workPackage.actualEndDate,
         },
       });
     }
@@ -369,11 +397,33 @@ export async function updateProgressLog(
     });
 
     if (latestLog) {
+      // Cari log pertama yang memiliki progres > 0 untuk actualStartDate
+      const firstActiveLog = await tx.progressLog.findFirst({
+        where: {
+          workPackageId: existingLog.workPackageId,
+          progressPct: { gt: 0 },
+          deletedAt: null,
+        },
+        orderBy: { weekNo: "asc" },
+      });
+
+      // Cari log saat mencapai progres >= 100 untuk actualEndDate
+      const completionLog = await tx.progressLog.findFirst({
+        where: {
+          workPackageId: existingLog.workPackageId,
+          progressPct: { gte: 100 },
+          deletedAt: null,
+        },
+        orderBy: { weekNo: "asc" },
+      });
+
       await tx.workPackage.update({
         where: { id: existingLog.workPackageId },
         data: {
           progressPct: latestLog.progressPct,
           volumeAchieved: latestLog.volumeAchieved,
+          actualStartDate: firstActiveLog ? firstActiveLog.logDate : null,
+          actualEndDate: completionLog ? completionLog.logDate : null,
         },
       });
     }
@@ -476,11 +526,33 @@ export async function deleteProgressLog(
     const newWpProgress = latestRemainingLog ? latestRemainingLog.progressPct : 0;
     const newWpVolume = latestRemainingLog ? latestRemainingLog.volumeAchieved : null;
 
+    // Cari log pertama yang memiliki progres > 0 untuk actualStartDate
+    const firstActiveLog = await tx.progressLog.findFirst({
+      where: {
+        workPackageId: log.workPackageId,
+        progressPct: { gt: 0 },
+        deletedAt: null,
+      },
+      orderBy: { weekNo: "asc" },
+    });
+
+    // Cari log saat mencapai progres >= 100 untuk actualEndDate
+    const completionLog = await tx.progressLog.findFirst({
+      where: {
+        workPackageId: log.workPackageId,
+        progressPct: { gte: 100 },
+        deletedAt: null,
+      },
+      orderBy: { weekNo: "asc" },
+    });
+
     await tx.workPackage.update({
       where: { id: log.workPackageId },
       data: {
         progressPct: newWpProgress,
         volumeAchieved: newWpVolume,
+        actualStartDate: firstActiveLog ? firstActiveLog.logDate : null,
+        actualEndDate: completionLog ? completionLog.logDate : null,
       },
     });
 

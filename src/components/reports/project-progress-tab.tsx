@@ -1017,11 +1017,13 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                           <div className="grid grid-cols-[46px_1fr] items-baseline">
                                             <span className="text-muted-foreground">Selesai</span>
                                             <span className="text-foreground">
-                                              : {pkg.actualEndDate
-                                                ? formatDayMonth(pkg.actualEndDate)
-                                                : pkg.progressPct === 100
-                                                ? "Selesai"
-                                                : pkg.actualStartDate
+                                              : {pkg.progressPct >= 100
+                                                ? pkg.actualEndDate
+                                                  ? formatDayMonth(pkg.actualEndDate)
+                                                  : pkg.actualStartDate
+                                                  ? formatDayMonth(pkg.actualStartDate)
+                                                  : "100%"
+                                                : pkg.actualStartDate || pkg.progressPct > 0
                                                 ? "WIP"
                                                 : "-"}
                                             </span>
@@ -1093,7 +1095,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                     </div>
                                   </TableCell>
 
-                                  {/* Col 7: Jadwal Fisik (Plan, Rev, Aktual dengan titik dua lurus) */}
+                                  {/* Col 7: Jadwal Fisik (Plan, Rev, Selesai dengan titik dua lurus) */}
                                   <TableCell className="align-top py-2.5">
                                     {pkg.hasPhysicalWork !== false ? (
                                       <div className="space-y-0.5 text-[10px] font-mono">
@@ -1113,20 +1115,26 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                           </div>
                                         )}
 
-                                        {/* Aktual */}
-                                        {pkg.actualStartDate ? (
-                                          <div className="grid grid-cols-[44px_1fr] items-baseline text-emerald-600 dark:text-emerald-400">
-                                            <span>Aktual</span>
+                                        {/* Selesai: isi tanggal ketika 100%, jika belum 100% tampilkan WIP / - */}
+                                        {pkg.progressPct >= 100 ? (
+                                          <div className="grid grid-cols-[44px_1fr] items-baseline text-emerald-600 dark:text-emerald-400 font-medium">
+                                            <span>Selesai</span>
                                             <span>
-                                              : {formatDayMonth(pkg.actualStartDate)} -{" "}
-                                              {pkg.actualEndDate
+                                              : {pkg.actualEndDate
                                                 ? formatDayMonth(pkg.actualEndDate)
-                                                : "WIP"}
+                                                : pkg.actualStartDate
+                                                ? formatDayMonth(pkg.actualStartDate)
+                                                : "100%"}
                                             </span>
+                                          </div>
+                                        ) : pkg.actualStartDate || pkg.progressPct > 0 ? (
+                                          <div className="grid grid-cols-[44px_1fr] items-baseline text-sky-600 dark:text-sky-400">
+                                            <span>Selesai</span>
+                                            <span>: WIP ({pkg.progressPct}%)</span>
                                           </div>
                                         ) : (
                                           <div className="grid grid-cols-[44px_1fr] items-baseline text-muted-foreground">
-                                            <span>Aktual</span>
+                                            <span>Selesai</span>
                                             <span>: -</span>
                                           </div>
                                         )}

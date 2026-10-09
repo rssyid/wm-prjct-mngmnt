@@ -569,6 +569,14 @@ export async function GET(request: NextRequest) {
               prUspkDate: true,
               estDeliveryDate: true,
               actualDeliveryDate: true,
+              progressLogs: {
+                where: { deletedAt: null },
+                select: {
+                  logDate: true,
+                  progressPct: true,
+                },
+                orderBy: { weekNo: "asc" },
+              },
             },
             orderBy: { packageName: "asc" },
           },
@@ -696,43 +704,62 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          return {
-            id: pkg.id,
-            packageName: pkg.packageName,
-            category: pkg.category,
-            vendorName: pkg.vendorName || pkg.vendor?.name || "-",
-            weightPct: pkg.weightPct,
-            progressPct: pkg.progressPct,
-            targetQuantity: pkg.targetQuantity,
-            volumeAchieved: pkg.volumeAchieved,
-            uom: pkg.uom,
-            status: pkg.status,
-            paymentStatus: pkg.paymentStatus,
-            hasPhysicalWork: pkg.hasPhysicalWork !== false,
-            procurementPlanStartDate: pkg.procurementPlanStartDate
-              ? pkg.procurementPlanStartDate.toISOString()
-              : null,
-            procurementPlanEndDate: pkg.procurementPlanEndDate
-              ? pkg.procurementPlanEndDate.toISOString()
-              : null,
-            procurementRevisedEndDate: pkg.procurementRevisedEndDate
-              ? pkg.procurementRevisedEndDate.toISOString()
-              : null,
-            planStartDate: pkg.planStartDate ? pkg.planStartDate.toISOString() : null,
-            planEndDate: pkg.planEndDate ? pkg.planEndDate.toISOString() : null,
-            revisedEndDate: pkg.revisedEndDate ? pkg.revisedEndDate.toISOString() : null,
-            actualStartDate: pkg.actualStartDate ? pkg.actualStartDate.toISOString() : null,
-            actualEndDate: pkg.actualEndDate ? pkg.actualEndDate.toISOString() : null,
-            noPoSpk: pkg.noPoSpk || null,
-            poSpkDate: pkg.poSpkDate ? pkg.poSpkDate.toISOString() : null,
-            noPrUspk: pkg.noPrUspk || null,
-            prUspkDate: pkg.prUspkDate ? pkg.prUspkDate.toISOString() : null,
-            estDeliveryDate: pkg.estDeliveryDate ? pkg.estDeliveryDate.toISOString() : null,
-            actualDeliveryDate: pkg.actualDeliveryDate
-              ? pkg.actualDeliveryDate.toISOString()
-              : null,
-            isDelayed,
-          };
+            const firstActiveLog = pkg.progressLogs?.find((l) => l.progressPct > 0);
+            const completionLog = pkg.progressLogs?.find((l) => l.progressPct >= 100);
+
+            const resolvedActualStartDate =
+              pkg.actualStartDate ??
+              (firstActiveLog ? firstActiveLog.logDate : null);
+
+            const resolvedActualEndDate =
+              pkg.actualEndDate ??
+              (completionLog
+                ? completionLog.logDate
+                : pkg.progressPct >= 100 && firstActiveLog
+                ? firstActiveLog.logDate
+                : null);
+
+            return {
+              id: pkg.id,
+              packageName: pkg.packageName,
+              category: pkg.category,
+              vendorName: pkg.vendorName || pkg.vendor?.name || "-",
+              weightPct: pkg.weightPct,
+              progressPct: pkg.progressPct,
+              targetQuantity: pkg.targetQuantity,
+              volumeAchieved: pkg.volumeAchieved,
+              uom: pkg.uom,
+              status: pkg.status,
+              paymentStatus: pkg.paymentStatus,
+              hasPhysicalWork: pkg.hasPhysicalWork !== false,
+              procurementPlanStartDate: pkg.procurementPlanStartDate
+                ? pkg.procurementPlanStartDate.toISOString()
+                : null,
+              procurementPlanEndDate: pkg.procurementPlanEndDate
+                ? pkg.procurementPlanEndDate.toISOString()
+                : null,
+              procurementRevisedEndDate: pkg.procurementRevisedEndDate
+                ? pkg.procurementRevisedEndDate.toISOString()
+                : null,
+              planStartDate: pkg.planStartDate ? pkg.planStartDate.toISOString() : null,
+              planEndDate: pkg.planEndDate ? pkg.planEndDate.toISOString() : null,
+              revisedEndDate: pkg.revisedEndDate ? pkg.revisedEndDate.toISOString() : null,
+              actualStartDate: resolvedActualStartDate
+                ? new Date(resolvedActualStartDate).toISOString()
+                : null,
+              actualEndDate: resolvedActualEndDate
+                ? new Date(resolvedActualEndDate).toISOString()
+                : null,
+              noPoSpk: pkg.noPoSpk || null,
+              poSpkDate: pkg.poSpkDate ? pkg.poSpkDate.toISOString() : null,
+              noPrUspk: pkg.noPrUspk || null,
+              prUspkDate: pkg.prUspkDate ? pkg.prUspkDate.toISOString() : null,
+              estDeliveryDate: pkg.estDeliveryDate ? pkg.estDeliveryDate.toISOString() : null,
+              actualDeliveryDate: pkg.actualDeliveryDate
+                ? pkg.actualDeliveryDate.toISOString()
+                : null,
+              isDelayed,
+            };
         });
 
         return {
