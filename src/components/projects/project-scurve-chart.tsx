@@ -193,7 +193,8 @@ export function ProjectSCurveChart({
         let totalWeight = 0;
 
         packages.forEach((pkg) => {
-          totalWeight += pkg.weightPct;
+          const wPct = Number(pkg.weightPct) || 0;
+          totalWeight += wPct;
           const pkgLogs = logsByPackage.get(pkg.id);
 
           // Cari progres terakhir dari minggu 1 s/d w
@@ -201,17 +202,19 @@ export function ProjectSCurveChart({
           if (pkgLogs) {
             for (let checkW = w; checkW >= 1; checkW--) {
               if (pkgLogs.has(checkW)) {
-                latestProg = pkgLogs.get(checkW)!;
+                latestProg = Number(pkgLogs.get(checkW)) || 0;
                 break;
               }
             }
           }
 
-          weightedSum += (latestProg * pkg.weightPct) / 100;
+          weightedSum += (latestProg * wPct) / 100;
         });
 
+        // Normalisasi progres paket kerja ke porsi 95% bobot total proyek
+        // (weightedSum / totalWeight) * 95%
         const normalizedWpSum =
-          totalWeight > 0 ? (weightedSum / (totalWeight / 100)) * 95 : 0;
+          totalWeight > 0 ? (weightedSum / totalWeight) * 95 : 0;
 
         actualPct = Math.min(100, Math.round((afceActualPct + normalizedWpSum) * 10) / 10);
         dev = Math.round((actualPct - planPct) * 10) / 10;
