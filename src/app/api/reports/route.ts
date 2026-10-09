@@ -513,6 +513,13 @@ export async function GET(request: NextRequest) {
           uom: true,
           targetStartDate: true,
           targetEndDate: true,
+          folderCategory: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
           company: {
             select: {
               id: true,
@@ -547,6 +554,19 @@ export async function GET(request: NextRequest) {
               uom: true,
               status: true,
               paymentStatus: true,
+              hasPhysicalWork: true,
+              procurementPlanStartDate: true,
+              procurementPlanEndDate: true,
+              procurementRevisedEndDate: true,
+              planStartDate: true,
+              planEndDate: true,
+              actualStartDate: true,
+              actualEndDate: true,
+              revisedEndDate: true,
+              noPoSpk: true,
+              poSpkDate: true,
+              noPrUspk: true,
+              prUspkDate: true,
               estDeliveryDate: true,
               actualDeliveryDate: true,
             },
@@ -561,7 +581,11 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: [{ company: { name: "asc" } }, { projectCode: "asc" }],
+        orderBy: [
+          { folderCategory: { name: "asc" } },
+          { company: { name: "asc" } },
+          { projectCode: "asc" },
+        ],
       });
 
       const now = new Date();
@@ -684,6 +708,25 @@ export async function GET(request: NextRequest) {
             uom: pkg.uom,
             status: pkg.status,
             paymentStatus: pkg.paymentStatus,
+            hasPhysicalWork: pkg.hasPhysicalWork !== false,
+            procurementPlanStartDate: pkg.procurementPlanStartDate
+              ? pkg.procurementPlanStartDate.toISOString()
+              : null,
+            procurementPlanEndDate: pkg.procurementPlanEndDate
+              ? pkg.procurementPlanEndDate.toISOString()
+              : null,
+            procurementRevisedEndDate: pkg.procurementRevisedEndDate
+              ? pkg.procurementRevisedEndDate.toISOString()
+              : null,
+            planStartDate: pkg.planStartDate ? pkg.planStartDate.toISOString() : null,
+            planEndDate: pkg.planEndDate ? pkg.planEndDate.toISOString() : null,
+            revisedEndDate: pkg.revisedEndDate ? pkg.revisedEndDate.toISOString() : null,
+            actualStartDate: pkg.actualStartDate ? pkg.actualStartDate.toISOString() : null,
+            actualEndDate: pkg.actualEndDate ? pkg.actualEndDate.toISOString() : null,
+            noPoSpk: pkg.noPoSpk || null,
+            poSpkDate: pkg.poSpkDate ? pkg.poSpkDate.toISOString() : null,
+            noPrUspk: pkg.noPrUspk || null,
+            prUspkDate: pkg.prUspkDate ? pkg.prUspkDate.toISOString() : null,
             estDeliveryDate: pkg.estDeliveryDate ? pkg.estDeliveryDate.toISOString() : null,
             actualDeliveryDate: pkg.actualDeliveryDate
               ? pkg.actualDeliveryDate.toISOString()
@@ -696,6 +739,9 @@ export async function GET(request: NextRequest) {
           id: p.id,
           projectCode: p.projectCode,
           projectName: p.displayName || p.projectName,
+          folderCategoryId: p.folderCategory?.id,
+          folderCategoryName: p.folderCategory?.name || "Tanpa Kategori",
+          folderCategoryCode: p.folderCategory?.code || "-",
           companyId: p.company.id,
           companyName: p.company.name,
           companyCode: p.company.code,

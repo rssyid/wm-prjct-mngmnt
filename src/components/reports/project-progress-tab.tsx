@@ -41,7 +41,7 @@ import {
   exportProjectProgressExcel,
   ProjectProgressItem,
 } from "@/lib/export/report-excel";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDayMonth } from "@/lib/utils";
 import {
   AlertTriangle,
   Boxes,
@@ -52,6 +52,7 @@ import {
   Compass,
   Download,
   ExternalLink,
+  Folder,
   Layers,
   Loader2,
   Package,
@@ -179,6 +180,22 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
     }
   };
 
+  // Grouping proyek berdasarkan FolderCategory untuk View 1 (Siklus Hidup)
+  const groupedProjects = React.useMemo(() => {
+    const map = new Map<string, ProjectProgressItem[]>();
+    data.forEach((item) => {
+      const category = item.folderCategoryName || "Tanpa Kategori";
+      if (!map.has(category)) {
+        map.set(category, []);
+      }
+      map.get(category)!.push(item);
+    });
+    return Array.from(map.entries()).map(([categoryName, items]) => ({
+      categoryName,
+      items,
+    }));
+  }, [data]);
+
   // Helper render status milestone chip
   const renderMilestoneChip = (
     label: string,
@@ -186,7 +203,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
     subText?: string
   ) => {
     let colorClass =
-      "bg-muted text-muted-foreground border-border";
+      "bg-muted/70 text-muted-foreground border-border/80";
     let icon = null;
 
     if (
@@ -203,6 +220,8 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
     } else if (
       status === "IN_PROGRESS" ||
       status === "PO_ISSUED" ||
+      status === "PR_SUBMITTED" ||
+      status === "DRAFT" ||
       status === "WAITING" ||
       status === "WAITING_VERIFICATION"
     ) {
@@ -218,7 +237,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
     return (
       <div className="flex flex-col gap-0.5 min-w-[90px]">
         <div
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${colorClass}`}
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${colorClass}`}
         >
           {icon}
           <span className="truncate">{label}</span>
@@ -512,150 +531,214 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="text-xs">
-                  {data.map((item, index) => {
-                    const statusCfg = PROJECT_STATUS_CONFIG[item.status];
-                    const indCfg = STATUS_INDICATOR_CONFIG[item.statusIndicator];
-
-                    return (
-                      <TableRow key={item.id} className="hover:bg-muted/30">
-                        <TableCell className="text-center text-muted-foreground font-mono text-[11px]">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <span className="font-semibold text-foreground line-clamp-1">
-                              {item.projectName}
-                            </span>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-mono text-[10px] text-muted-foreground">
-                                {item.projectCode}
+                  {data.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={12}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        Tidak ada data proyek yang ditemukan.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    groupedProjects.map((group) => (
+                      <React.Fragment key={group.categoryName}>
+                        {/* Header Baris Kategori Proyek */}
+                        <TableRow className="bg-muted/70 font-semibold border-y border-border">
+                          <TableCell colSpan={12} className="py-2 px-3">
+                            <div className="flex items-center gap-2">
+                              <Folder className="h-3.5 w-3.5 text-primary" />
+                              <span className="text-foreground text-xs font-bold uppercase tracking-wider">
+                                Kategori: {group.categoryName}
                               </span>
                               <Badge
-                                variant="outline"
-                                className={`text-[9px] px-1.5 py-0 h-4 border ${statusCfg?.badgeClass || ""}`}
+                                variant="secondary"
+                                className="text-[10px] h-4.5 px-2 font-normal"
                               >
-                                {statusCfg?.label || item.status}
+                                {group.items.length} Proyek
                               </Badge>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-0.5">
-                            <div className="font-medium text-foreground truncate max-w-[150px]">
-                              {item.companyName}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">
-                              {item.regionName}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] px-1.5 py-0.5 border ${indCfg?.badgeClass || ""}`}
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full mr-1.5 ${indCfg?.dotClass || ""}`}
-                            />
-                            {indCfg?.label || item.statusIndicator}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-semibold">
-                              <span>{item.progressPct}%</span>
-                            </div>
-                            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                              <div
-                                className="bg-sky-500 h-1.5 rounded-full transition-all"
-                                style={{ width: `${Math.min(100, item.progressPct)}%` }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {renderMilestoneChip(
-                            item.milestones.survey.status === "DONE"
-                              ? "Selesai"
-                              : item.milestones.survey.status === "IN_PROGRESS"
-                              ? "Berjalan"
-                              : "Belum",
-                            item.milestones.survey.status
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {renderMilestoneChip(
-                            item.milestones.rab.status === "READY"
-                              ? "Siap"
-                              : item.milestones.rab.status === "DRAFT"
-                              ? "Draft"
-                              : "Belum",
-                            item.milestones.rab.status
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {renderMilestoneChip(
-                            item.milestones.approval.status === "APPROVED"
-                              ? "Approved"
-                              : item.milestones.approval.status === "WAITING"
-                              ? "Waiting"
-                              : item.milestones.approval.status === "REJECTED"
-                              ? "Rejected"
-                              : "Draft",
-                            item.milestones.approval.status,
-                            item.milestones.approval.noAr
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {renderMilestoneChip(
-                            item.milestones.procurement.status === "DELIVERED"
-                              ? "Tiba Lengkap"
-                              : item.milestones.procurement.status === "PO_ISSUED"
-                              ? "PO Terbit"
-                              : item.milestones.procurement.status === "PR_SUBMITTED"
-                              ? "PR Diajukan"
-                              : "Belum Ada",
-                            item.milestones.procurement.status,
-                            `${item.milestones.procurement.deliveredPackages}/${item.milestones.procurement.totalPackages} Paket Tiba`
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {renderMilestoneChip(
-                            item.milestones.execution.status === "COMPLETED"
-                              ? "Tuntas"
-                              : item.milestones.execution.status === "IN_PROGRESS"
-                              ? `${item.milestones.execution.progressPct}%`
-                              : "Belum",
-                            item.milestones.execution.status
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {renderMilestoneChip(
-                            item.milestones.bast.status === "VERIFIED"
-                              ? "Verified"
-                              : item.milestones.bast.status === "WAITING_VERIFICATION"
-                              ? "Menunggu"
-                              : "Belum Ada",
-                            item.milestones.bast.status,
-                            item.milestones.bast.bastNumber
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            asChild
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary"
-                            title="Buka Proyek"
-                          >
-                            <Link href={`/projects/${item.id}`}>
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Baris-baris Proyek di dalam Kategori */}
+                        {group.items.map((item, index) => {
+                          const statusCfg = PROJECT_STATUS_CONFIG[item.status];
+                          const indCfg =
+                            STATUS_INDICATOR_CONFIG[item.statusIndicator];
+
+                          return (
+                            <TableRow
+                              key={item.id}
+                              className="hover:bg-muted/30"
+                            >
+                              <TableCell className="text-center text-muted-foreground font-mono text-[11px] align-top py-2.5">
+                                {index + 1}
+                              </TableCell>
+
+                              {/* Kolom 2: Proyek & Status (3 Baris Vertikal) */}
+                              <TableCell className="align-top py-2.5">
+                                <div className="flex flex-col gap-1 min-w-[200px]">
+                                  {/* Baris 1: Nama Proyek */}
+                                  <span className="font-semibold text-foreground text-xs leading-snug">
+                                    {item.projectName}
+                                  </span>
+                                  {/* Baris 2: No Proyek */}
+                                  <span className="font-mono text-[10px] text-muted-foreground leading-none">
+                                    {item.projectCode}
+                                  </span>
+                                  {/* Baris 3: Status Proyek */}
+                                  <div>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "text-[9px] px-1.5 py-0 h-4 border font-medium inline-flex",
+                                        statusCfg?.badgeClass
+                                      )}
+                                    >
+                                      {statusCfg?.label || item.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </TableCell>
+
+                              <TableCell className="align-top py-2.5">
+                                <div className="space-y-0.5">
+                                  <div className="font-medium text-foreground truncate max-w-[150px]">
+                                    {item.companyName}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                                    {item.regionName}
+                                  </div>
+                                </div>
+                              </TableCell>
+
+                              <TableCell className="align-top py-2.5">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] px-1.5 py-0.5 border ${indCfg?.badgeClass || ""}`}
+                                >
+                                  <span
+                                    className={`h-1.5 w-1.5 rounded-full mr-1.5 ${indCfg?.dotClass || ""}`}
+                                  />
+                                  {indCfg?.label || item.statusIndicator}
+                                </Badge>
+                              </TableCell>
+
+                              <TableCell className="align-top py-2.5">
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] font-semibold">
+                                    <span>{item.progressPct}%</span>
+                                  </div>
+                                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className="bg-sky-500 h-1.5 rounded-full transition-all"
+                                      style={{
+                                        width: `${Math.min(100, item.progressPct)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </TableCell>
+
+                              {/* 1. Survei: Done / WIP / Not Yet */}
+                              <TableCell className="align-top py-2.5">
+                                {renderMilestoneChip(
+                                  item.milestones.survey.status === "DONE"
+                                    ? "Done"
+                                    : item.milestones.survey.status === "IN_PROGRESS"
+                                    ? "WIP"
+                                    : "Not Yet",
+                                  item.milestones.survey.status
+                                )}
+                              </TableCell>
+
+                              {/* 2. RAB: Done / Draft / Not Yet */}
+                              <TableCell className="align-top py-2.5">
+                                {renderMilestoneChip(
+                                  item.milestones.rab.status === "READY"
+                                    ? "Done"
+                                    : item.milestones.rab.status === "DRAFT"
+                                    ? "Draft"
+                                    : "Not Yet",
+                                  item.milestones.rab.status
+                                )}
+                              </TableCell>
+
+                              {/* 3. Approval AR: Approved / WIP / Rejected / Not Yet */}
+                              <TableCell className="align-top py-2.5">
+                                {renderMilestoneChip(
+                                  item.milestones.approval.status === "APPROVED"
+                                    ? "Approved"
+                                    : item.milestones.approval.status === "WAITING"
+                                    ? "WIP"
+                                    : item.milestones.approval.status === "REJECTED"
+                                    ? "Rejected"
+                                    : "Not Yet",
+                                  item.milestones.approval.status,
+                                  item.milestones.approval.noAr
+                                )}
+                              </TableCell>
+
+                              {/* 4. Pengadaan: Delivered / PO / PR / Not Yet */}
+                              <TableCell className="align-top py-2.5">
+                                {renderMilestoneChip(
+                                  item.milestones.procurement.status === "DELIVERED"
+                                    ? "Delivered"
+                                    : item.milestones.procurement.status === "PO_ISSUED"
+                                    ? "PO"
+                                    : item.milestones.procurement.status === "PR_SUBMITTED"
+                                    ? "PR"
+                                    : "Not Yet",
+                                  item.milestones.procurement.status,
+                                  `${item.milestones.procurement.deliveredPackages}/${item.milestones.procurement.totalPackages} Paket Tiba`
+                                )}
+                              </TableCell>
+
+                              {/* 5. Eksekusi: Done (100%) / WIP ([x]%) / Not Yet */}
+                              <TableCell className="align-top py-2.5">
+                                {renderMilestoneChip(
+                                  item.milestones.execution.status === "COMPLETED"
+                                    ? "Done (100%)"
+                                    : item.milestones.execution.status === "IN_PROGRESS"
+                                    ? `WIP (${item.milestones.execution.progressPct}%)`
+                                    : "Not Yet",
+                                  item.milestones.execution.status
+                                )}
+                              </TableCell>
+
+                              {/* 6. BAST: Verified / WIP / Not Yet */}
+                              <TableCell className="align-top py-2.5">
+                                {renderMilestoneChip(
+                                  item.milestones.bast.status === "VERIFIED"
+                                    ? "Verified"
+                                    : item.milestones.bast.status === "WAITING_VERIFICATION"
+                                    ? "WIP"
+                                    : "Not Yet",
+                                  item.milestones.bast.status,
+                                  item.milestones.bast.bastNumber
+                                )}
+                              </TableCell>
+
+                              <TableCell className="text-center align-top py-2.5">
+                                <Button
+                                  asChild
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                  title="Buka Proyek"
+                                >
+                                  <Link href={`/projects/${item.id}`}>
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                  </Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -667,14 +750,14 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                   <TableRow>
                     <TableHead className="w-10"></TableHead>
                     <TableHead className="min-w-[190px]">Proyek & Perusahaan</TableHead>
-                    <TableHead className="min-w-[160px]">Paket Pekerjaan</TableHead>
-                    <TableHead className="min-w-[120px]">Vendor</TableHead>
+                    <TableHead className="min-w-[170px]">Paket Pekerjaan</TableHead>
+                    <TableHead className="min-w-[120px]">Vendor & PO</TableHead>
                     <TableHead className="min-w-[110px]">Bobot & Progres</TableHead>
-                    <TableHead className="min-w-[120px]">Volume Target vs Capaian</TableHead>
-                    <TableHead className="min-w-[110px]">Status Paket</TableHead>
-                    <TableHead className="min-w-[110px]">Pembayaran</TableHead>
-                    <TableHead className="min-w-[130px]">Kedatangan & Keterlambatan</TableHead>
-                    <TableHead className="w-14 text-center">Aksi</TableHead>
+                    <TableHead className="min-w-[110px]">Target vs Capaian</TableHead>
+                    <TableHead className="min-w-[100px]">Status & Bayar</TableHead>
+                    <TableHead className="min-w-[130px]">Jadwal Pengadaan</TableHead>
+                    <TableHead className="min-w-[130px]">Jadwal Fisik</TableHead>
+                    <TableHead className="w-12 text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="text-xs">
@@ -697,16 +780,27 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                             )}
                           </TableCell>
                           <TableCell colSpan={2}>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-foreground">
                                 {item.projectName}
                               </span>
                               <span className="font-mono text-[10px] text-muted-foreground">
                                 ({item.projectCode})
                               </span>
-                              <Badge variant="outline" className="text-[10px] h-4 px-1.5 ml-1">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] h-4 px-1.5 ml-1"
+                              >
                                 {item.companyName}
                               </Badge>
+                              {item.folderCategoryName && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[9px] h-4 px-1.5"
+                                >
+                                  {item.folderCategoryName}
+                                </Badge>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell colSpan={2}>
@@ -722,7 +816,10 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                   <div
                                     className="bg-sky-500 h-1.5 rounded-full"
                                     style={{
-                                      width: `${Math.min(100, item.progressPct)}%`,
+                                      width: `${Math.min(
+                                        100,
+                                        item.progressPct
+                                      )}%`,
                                     }}
                                   />
                                 </div>
@@ -732,10 +829,15 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                           <TableCell colSpan={4}>
                             <span className="text-[10px] text-muted-foreground">
                               Target Selesai:{" "}
-                              {item.targetEndDate ? formatDate(item.targetEndDate) : "-"}
+                              {item.targetEndDate
+                                ? formatDayMonth(item.targetEndDate)
+                                : "-"}
                             </span>
                           </TableCell>
-                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <TableCell
+                            className="text-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Button
                               asChild
                               variant="ghost"
@@ -743,7 +845,7 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                               className="h-7 w-7 text-muted-foreground hover:text-primary"
                               title="Buka Tab Paket Pekerjaan"
                             >
-                              <Link href={`/projects/${item.id}?tab=procurement`}>
+                              <Link href={`/projects/${item.id}?tab=packages`}>
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </Link>
                             </Button>
@@ -755,7 +857,10 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                           (wpCount === 0 ? (
                             <TableRow className="bg-background">
                               <TableCell></TableCell>
-                              <TableCell colSpan={9} className="text-muted-foreground italic py-3 text-center">
+                              <TableCell
+                                colSpan={9}
+                                className="text-muted-foreground italic py-3 text-center"
+                              >
                                 Belum ada paket pekerjaan pada proyek ini.
                               </TableCell>
                             </TableRow>
@@ -765,6 +870,25 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                 PACKAGE_STATUS_CONFIG[pkg.status];
                               const payStatusCfg =
                                 PAYMENT_STATUS_CONFIG[pkg.paymentStatus];
+
+                              const procPlan =
+                                pkg.procurementPlanStartDate &&
+                                pkg.procurementPlanEndDate
+                                  ? `${formatDayMonth(
+                                      pkg.procurementPlanStartDate
+                                    )} - ${formatDayMonth(
+                                      pkg.procurementPlanEndDate
+                                    )}`
+                                  : "-";
+
+                              const physPlan =
+                                pkg.hasPhysicalWork !== false &&
+                                pkg.planStartDate &&
+                                pkg.planEndDate
+                                  ? `${formatDayMonth(
+                                      pkg.planStartDate
+                                    )} - ${formatDayMonth(pkg.planEndDate)}`
+                                  : "-";
 
                               return (
                                 <TableRow
@@ -778,39 +902,83 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                       <span className="font-semibold text-foreground">
                                         {pkg.packageName}
                                       </span>
-                                      <div className="text-[10px] text-muted-foreground font-mono">
-                                        {PACKAGE_CATEGORY_CONFIG[pkg.category]?.label || pkg.category}
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[10px] text-muted-foreground font-mono">
+                                          {PACKAGE_CATEGORY_CONFIG[pkg.category]
+                                            ?.label || pkg.category}
+                                        </span>
+                                        {pkg.hasPhysicalWork !== false ? (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[9px] px-1 py-0 h-3.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-300"
+                                          >
+                                            Pengadaan + Fisik
+                                          </Badge>
+                                        ) : (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[9px] px-1 py-0 h-3.5 bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-400 border-sky-300"
+                                          >
+                                            Hanya Pengadaan
+                                          </Badge>
+                                        )}
                                       </div>
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    <span className="text-[11px] text-muted-foreground truncate max-w-[130px] block">
-                                      {pkg.vendorName}
-                                    </span>
+                                    <div className="space-y-0.5">
+                                      <span className="text-[11px] text-muted-foreground truncate max-w-[130px] block">
+                                        {pkg.vendorName}
+                                      </span>
+                                      {pkg.noPoSpk && (
+                                        <span className="text-[10px] font-mono text-muted-foreground block">
+                                          PO: {pkg.noPoSpk}{" "}
+                                          {pkg.poSpkDate
+                                            ? `(${formatDayMonth(
+                                                pkg.poSpkDate
+                                              )})`
+                                            : ""}
+                                        </span>
+                                      )}
+                                    </div>
                                   </TableCell>
                                   <TableCell>
-                                    <div className="space-y-1">
-                                      <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-muted-foreground">
+                                    {pkg.hasPhysicalWork !== false ? (
+                                      <div className="space-y-1">
+                                        <div className="flex items-center justify-between text-[10px]">
+                                          <span className="text-muted-foreground">
+                                            Bobot: {pkg.weightPct}%
+                                          </span>
+                                          <span className="font-semibold text-foreground">
+                                            {pkg.progressPct}%
+                                          </span>
+                                        </div>
+                                        <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
+                                          <div
+                                            className="bg-emerald-500 h-1 rounded-full"
+                                            style={{
+                                              width: `${Math.min(
+                                                100,
+                                                pkg.progressPct
+                                              )}%`,
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-0.5 text-[10px]">
+                                        <span className="text-muted-foreground block">
                                           Bobot: {pkg.weightPct}%
                                         </span>
-                                        <span className="font-semibold text-foreground">
-                                          {pkg.progressPct}%
+                                        <span className="text-[10px] text-muted-foreground italic block">
+                                          Material Saja (Tanpa Fisik)
                                         </span>
                                       </div>
-                                      <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
-                                        <div
-                                          className="bg-emerald-500 h-1 rounded-full"
-                                          style={{
-                                            width: `${Math.min(100, pkg.progressPct)}%`,
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
+                                    )}
                                   </TableCell>
                                   <TableCell>
                                     <div className="text-[11px] font-mono">
@@ -822,39 +990,111 @@ export function ProjectProgressTab({ companies }: ProjectProgressTabProps) {
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-[9px] px-1.5 py-0 h-4 border ${pkgStatusCfg?.badgeClass || ""}`}
-                                    >
-                                      {pkgStatusCfg?.label || pkg.status}
-                                    </Badge>
+                                    <div className="space-y-1">
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-[9px] px-1.5 py-0 h-4 border ${
+                                          pkgStatusCfg?.badgeClass || ""
+                                        }`}
+                                      >
+                                        {pkgStatusCfg?.label || pkg.status}
+                                      </Badge>
+                                      <div>
+                                        <Badge
+                                          variant="outline"
+                                          className={`text-[9px] px-1.5 py-0 h-4 border ${
+                                            payStatusCfg?.badgeClass || ""
+                                          }`}
+                                        >
+                                          {payStatusCfg?.label ||
+                                            pkg.paymentStatus}
+                                        </Badge>
+                                      </div>
+                                    </div>
                                   </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-[9px] px-1.5 py-0 h-4 border ${payStatusCfg?.badgeClass || ""}`}
-                                    >
-                                      {payStatusCfg?.label || pkg.paymentStatus}
-                                    </Badge>
-                                  </TableCell>
+                                  {/* Jadwal Pengadaan */}
                                   <TableCell>
                                     <div className="space-y-0.5 text-[10px]">
-                                      <div className="text-muted-foreground">
-                                        Est: {pkg.estDeliveryDate ? formatDate(pkg.estDeliveryDate) : "-"}
+                                      <div className="font-mono text-muted-foreground">
+                                        Plan: {procPlan}
                                       </div>
-                                      {pkg.isDelayed ? (
-                                        <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1">
-                                          <AlertTriangle className="h-3 w-3 shrink-0" />
-                                          Terlambat
-                                        </span>
-                                      ) : pkg.actualDeliveryDate ? (
-                                        <span className="text-emerald-600 dark:text-emerald-400">
-                                          Tiba: {formatDate(pkg.actualDeliveryDate)}
-                                        </span>
-                                      ) : (
-                                        <span className="text-muted-foreground">-</span>
+                                      {pkg.procurementRevisedEndDate && (
+                                        <div className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                                          Rev:{" "}
+                                          {formatDayMonth(
+                                            pkg.procurementRevisedEndDate
+                                          )}
+                                        </div>
                                       )}
+                                      <div className="pt-0.5">
+                                        {pkg.isDelayed ? (
+                                          <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1">
+                                            <AlertTriangle className="h-3 w-3 shrink-0" />
+                                            Terlambat (
+                                            {pkg.estDeliveryDate
+                                              ? formatDayMonth(
+                                                  pkg.estDeliveryDate
+                                                )
+                                              : "-"}
+                                            )
+                                          </span>
+                                        ) : pkg.actualDeliveryDate ? (
+                                          <span className="text-emerald-600 dark:text-emerald-400">
+                                            Tiba:{" "}
+                                            {formatDayMonth(
+                                              pkg.actualDeliveryDate
+                                            )}
+                                          </span>
+                                        ) : pkg.estDeliveryDate ? (
+                                          <span className="text-muted-foreground">
+                                            Est:{" "}
+                                            {formatDayMonth(
+                                              pkg.estDeliveryDate
+                                            )}
+                                          </span>
+                                        ) : (
+                                          <span className="text-muted-foreground">
+                                            -
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
+                                  </TableCell>
+                                  {/* Jadwal Fisik */}
+                                  <TableCell>
+                                    {pkg.hasPhysicalWork !== false ? (
+                                      <div className="space-y-0.5 text-[10px]">
+                                        <div className="font-mono text-muted-foreground">
+                                          Plan: {physPlan}
+                                        </div>
+                                        {pkg.revisedEndDate && (
+                                          <div className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                                            Rev:{" "}
+                                            {formatDayMonth(
+                                              pkg.revisedEndDate
+                                            )}
+                                          </div>
+                                        )}
+                                        {pkg.actualStartDate && (
+                                          <div className="font-mono text-emerald-600 dark:text-emerald-400">
+                                            Aktual:{" "}
+                                            {formatDayMonth(
+                                              pkg.actualStartDate
+                                            )}{" "}
+                                            -{" "}
+                                            {pkg.actualEndDate
+                                              ? formatDayMonth(
+                                                  pkg.actualEndDate
+                                                )
+                                              : "WIP"}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-muted-foreground italic">
+                                        Tanpa Pekerjaan Fisik
+                                      </span>
+                                    )}
                                   </TableCell>
                                   <TableCell></TableCell>
                                 </TableRow>

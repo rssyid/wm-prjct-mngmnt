@@ -5,7 +5,7 @@ import {
   PROJECT_STATUS_CONFIG,
   normalizeApprovalRoleCode,
 } from "@/lib/constants/status";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDayMonth } from "@/lib/utils";
 import {
   PackageCategory,
   PackageStatus,
@@ -221,6 +221,19 @@ export interface WorkPackageProgressItem {
   uom: string | null;
   status: PackageStatus;
   paymentStatus: PaymentStatus;
+  hasPhysicalWork?: boolean;
+  procurementPlanStartDate?: string | null;
+  procurementPlanEndDate?: string | null;
+  procurementRevisedEndDate?: string | null;
+  planStartDate?: string | null;
+  planEndDate?: string | null;
+  revisedEndDate?: string | null;
+  actualStartDate?: string | null;
+  actualEndDate?: string | null;
+  noPoSpk?: string | null;
+  poSpkDate?: string | null;
+  noPrUspk?: string | null;
+  prUspkDate?: string | null;
   estDeliveryDate: string | null;
   actualDeliveryDate: string | null;
   isDelayed: boolean;
@@ -230,6 +243,9 @@ export interface ProjectProgressItem {
   id: string;
   projectCode: string;
   projectName: string;
+  folderCategoryId?: string;
+  folderCategoryName?: string;
+  folderCategoryCode?: string;
   companyId: string;
   companyName: string;
   companyCode: string;
@@ -352,21 +368,75 @@ export async function exportProjectProgressExcel(items: ProjectProgressItem[]) {
   // Sheet 1: Siklus Proyek
   const summaryRows = items.map((item, index) => {
     const statusLabel = PROJECT_STATUS_CONFIG[item.status]?.label || item.status;
+    const surveyText =
+      item.milestones.survey.status === "DONE"
+        ? "Done"
+        : item.milestones.survey.status === "IN_PROGRESS"
+        ? "WIP"
+        : "Not Yet";
+
+    const rabText =
+      item.milestones.rab.status === "READY"
+        ? "Done"
+        : item.milestones.rab.status === "DRAFT"
+        ? "Draft"
+        : "Not Yet";
+
+    const approvalText =
+      item.milestones.approval.status === "APPROVED"
+        ? "Approved"
+        : item.milestones.approval.status === "WAITING"
+        ? item.milestones.approval.noAr
+          ? `WIP (${item.milestones.approval.noAr})`
+          : "WIP"
+        : item.milestones.approval.status === "REJECTED"
+        ? "Rejected"
+        : "Not Yet";
+
+    const procText = `${
+      item.milestones.procurement.status === "DELIVERED"
+        ? "Delivered"
+        : item.milestones.procurement.status === "PO_ISSUED"
+        ? "PO"
+        : item.milestones.procurement.status === "PR_SUBMITTED"
+        ? "PR"
+        : "Not Yet"
+    } (${item.milestones.procurement.deliveredPackages}/${item.milestones.procurement.totalPackages} Paket Tiba)`;
+
+    const execText =
+      item.milestones.execution.status === "COMPLETED"
+        ? "Done (100%)"
+        : item.milestones.execution.status === "IN_PROGRESS"
+        ? `WIP (${item.milestones.execution.progressPct}%)`
+        : "Not Yet";
+
+    const bastText =
+      item.milestones.bast.status === "VERIFIED"
+        ? item.milestones.bast.bastNumber
+          ? `Verified (${item.milestones.bast.bastNumber})`
+          : "Verified"
+        : item.milestones.bast.status === "WAITING_VERIFICATION"
+        ? item.milestones.bast.bastNumber
+          ? `WIP (${item.milestones.bast.bastNumber})`
+          : "WIP"
+        : "Not Yet";
+
     return {
       No: index + 1,
       "Kode Proyek": item.projectCode,
       "Nama Proyek": item.projectName,
+      "Kategori Proyek": item.folderCategoryName || "-",
       Perusahaan: item.companyName,
       Wilayah: item.regionName,
       "Status Proyek": statusLabel,
       "Indikator EWS": item.statusIndicator,
       "Progres Aktual (%)": item.progressPct,
-      "Fase 1: Survei": item.milestones.survey.status,
-      "Fase 2: RAB": item.milestones.rab.status,
-      "Fase 3: Approval AR": item.milestones.approval.status,
-      "Fase 4: Pengadaan": `${item.milestones.procurement.status} (${item.milestones.procurement.deliveredPackages}/${item.milestones.procurement.totalPackages} paket tiba)`,
-      "Fase 5: Eksekusi Lapangan": `${item.milestones.execution.status} (${item.milestones.execution.progressPct}%)`,
-      "Fase 6: Serah Terima BAST": item.milestones.bast.status,
+      "Fase 1: Survei": surveyText,
+      "Fase 2: RAB": rabText,
+      "Fase 3: Approval AR": approvalText,
+      "Fase 4: Pengadaan": procText,
+      "Fase 5: Eksekusi Lapangan": execText,
+      "Fase 6: Serah Terima BAST": bastText,
       "No BAST": item.milestones.bast.bastNumber || "-",
       "Tgl Verifikasi BAST": item.milestones.bast.verifiedAt ? formatDate(item.milestones.bast.verifiedAt) : "-",
       "Target Mulai": item.targetStartDate ? formatDate(item.targetStartDate) : "-",
@@ -380,15 +450,16 @@ export async function exportProjectProgressExcel(items: ProjectProgressItem[]) {
     { wch: 22 },
     { wch: 32 },
     { wch: 20 },
+    { wch: 20 },
     { wch: 18 },
     { wch: 18 },
     { wch: 16 },
     { wch: 18 },
     { wch: 16 },
     { wch: 14 },
-    { wch: 18 },
-    { wch: 26 },
-    { wch: 26 },
+    { wch: 22 },
+    { wch: 28 },
+    { wch: 22 },
     { wch: 22 },
     { wch: 18 },
     { wch: 18 },
@@ -406,40 +477,76 @@ export async function exportProjectProgressExcel(items: ProjectProgressItem[]) {
         "Kode Proyek": item.projectCode,
         "Nama Proyek": item.projectName,
         Perusahaan: item.companyName,
+        "Kategori Proyek": item.folderCategoryName || "-",
         "Nama Paket": "(Belum ada paket kerja)",
         Kategori: "-",
         Vendor: "-",
+        "No PO/SPK": "-",
+        "Cakupan Pekerjaan": "-",
         "Bobot (%)": 0,
-        "Progres (%)": 0,
+        "Progres Fisik (%)": "-",
         "Target Volume": "-",
         "Realisasi Volume": "-",
         Satuan: "-",
         "Status Paket": "-",
         "Status Pembayaran": "-",
+        "Rencana Pengadaan": "-",
+        "Revisi Pengadaan": "-",
         "Estimasi Tiba": "-",
         "Tiba Terakhir": "-",
-        "Keterlambatan": "-",
+        "Keterlambatan Pengadaan": "-",
+        "Rencana Fisik": "-",
+        "Revisi Fisik": "-",
+        "Realisasi Fisik Mulai": "-",
+        "Realisasi Fisik Selesai": "-",
       });
     } else {
       for (const pkg of item.workPackages) {
+        const procPlan =
+          pkg.procurementPlanStartDate && pkg.procurementPlanEndDate
+            ? `${formatDayMonth(pkg.procurementPlanStartDate)} - ${formatDayMonth(
+                pkg.procurementPlanEndDate
+              )}`
+            : "-";
+
+        const physPlan =
+          pkg.hasPhysicalWork !== false && pkg.planStartDate && pkg.planEndDate
+            ? `${formatDayMonth(pkg.planStartDate)} - ${formatDayMonth(pkg.planEndDate)}`
+            : "-";
+
         packageRows.push({
           No: pkgIdx++,
           "Kode Proyek": item.projectCode,
           "Nama Proyek": item.projectName,
           Perusahaan: item.companyName,
+          "Kategori Proyek": item.folderCategoryName || "-",
           "Nama Paket": pkg.packageName,
           Kategori: PACKAGE_CATEGORY_CONFIG[pkg.category]?.label || pkg.category,
           Vendor: pkg.vendorName || "-",
+          "No PO/SPK": pkg.noPoSpk || "-",
+          "Tgl PO": formatDayMonth(pkg.poSpkDate),
+          "Cakupan Pekerjaan":
+            pkg.hasPhysicalWork !== false ? "Pengadaan + Fisik" : "Hanya Pengadaan",
           "Bobot (%)": pkg.weightPct,
-          "Progres (%)": pkg.progressPct,
+          "Progres Fisik (%)":
+            pkg.hasPhysicalWork !== false ? `${pkg.progressPct}%` : "N/A (Material Saja)",
           "Target Volume": pkg.targetQuantity ?? "-",
           "Realisasi Volume": pkg.volumeAchieved ?? "-",
           Satuan: pkg.uom || "-",
           "Status Paket": PACKAGE_STATUS_CONFIG[pkg.status]?.label || pkg.status,
           "Status Pembayaran": PAYMENT_STATUS_CONFIG[pkg.paymentStatus]?.label || pkg.paymentStatus,
-          "Estimasi Tiba": pkg.estDeliveryDate ? formatDate(pkg.estDeliveryDate) : "-",
-          "Tiba Terakhir": pkg.actualDeliveryDate ? formatDate(pkg.actualDeliveryDate) : "-",
-          "Keterlambatan": pkg.isDelayed ? "Terlambat" : "Tepat Waktu",
+          "Rencana Pengadaan": procPlan,
+          "Revisi Pengadaan": formatDayMonth(pkg.procurementRevisedEndDate),
+          "Estimasi Tiba": formatDayMonth(pkg.estDeliveryDate),
+          "Tiba Terakhir": formatDayMonth(pkg.actualDeliveryDate),
+          "Keterlambatan Pengadaan": pkg.isDelayed ? "Terlambat" : "Tepat Waktu",
+          "Rencana Fisik": physPlan,
+          "Revisi Fisik":
+            pkg.hasPhysicalWork !== false ? formatDayMonth(pkg.revisedEndDate) : "-",
+          "Realisasi Fisik Mulai":
+            pkg.hasPhysicalWork !== false ? formatDayMonth(pkg.actualStartDate) : "-",
+          "Realisasi Fisik Selesai":
+            pkg.hasPhysicalWork !== false ? formatDayMonth(pkg.actualEndDate) : "-",
         });
       }
     }
@@ -451,19 +558,29 @@ export async function exportProjectProgressExcel(items: ProjectProgressItem[]) {
     { wch: 22 },
     { wch: 32 },
     { wch: 20 },
+    { wch: 20 },
     { wch: 28 },
     { wch: 16 },
-    { wch: 24 },
-    { wch: 12 },
-    { wch: 12 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 10 },
+    { wch: 18 },
+    { wch: 10 },
+    { wch: 18 },
     { wch: 14 },
     { wch: 16 },
     { wch: 10 },
     { wch: 18 },
     { wch: 18 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 16 },
+    { wch: 18 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 14 },
   ];
 
   const workbook = XLSX.utils.book_new();
