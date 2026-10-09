@@ -771,14 +771,15 @@ export function ProjectMatrixGanttChart({
 
                 {/* Kolom Mingguan (W1, W2, ...) */}
                 {weeks.map((week) => {
-                  const isCutoff = week.index === currentWeekIndex;
+                  const isCurrentWeek = week.index === currentWeekIndex;
                   return (
                     <th
                       key={week.index}
                       className={cn(
-                        "w-12 min-w-[46px] px-0.5 py-1 text-center border-r border-border/80 transition-colors",
-                        isCutoff &&
-                          "border-l-2 border-l-rose-500 bg-rose-50/40 dark:bg-rose-950/20"
+                        "w-12 min-w-[46px] px-0.5 py-1 text-center transition-colors",
+                        isCurrentWeek
+                          ? "border-r-2 border-r-rose-500 bg-rose-50/40 dark:bg-rose-950/20"
+                          : "border-r border-border/80"
                       )}
                     >
                       <div className="font-bold text-[10px] leading-tight">
@@ -812,8 +813,12 @@ export function ProjectMatrixGanttChart({
                       {currentWeekIndex >= 0 && currentWeekIndex < weeks.length ? (
                         <>
                           <td
-                            colSpan={4 + currentWeekIndex}
-                            className="px-3 py-1.5 border-y border-border text-left"
+                            colSpan={4 + currentWeekIndex + 1}
+                            className={cn(
+                              "px-3 py-1.5 border-y border-border text-left",
+                              currentWeekIndex === weeks.length - 1 &&
+                                "border-r-2 border-r-rose-500"
+                            )}
                           >
                             <div className="flex items-center gap-2">
                               <span className="text-primary font-bold">
@@ -826,10 +831,12 @@ export function ProjectMatrixGanttChart({
                               )}
                             </div>
                           </td>
-                          <td
-                            colSpan={weeks.length - currentWeekIndex}
-                            className="border-y border-border border-l-2 border-l-rose-500 bg-rose-50/20 dark:bg-rose-950/10"
-                          />
+                          {weeks.length > currentWeekIndex + 1 ? (
+                            <td
+                              colSpan={weeks.length - (currentWeekIndex + 1)}
+                              className="border-y border-border border-l-2 border-l-rose-500 bg-rose-50/20 dark:bg-rose-950/10"
+                            />
+                          ) : null}
                         </>
                       ) : (
                         <td
@@ -915,8 +922,10 @@ export function ProjectMatrixGanttChart({
                             <td
                               key={week.index}
                               className={cn(
-                                "p-0 text-center border-r border-border/80 h-7 transition-colors",
-                                isCutoff && "border-l-2 border-l-rose-500"
+                                "p-0 text-center h-7 transition-colors",
+                                isCutoff
+                                  ? "border-r-2 border-r-rose-500"
+                                  : "border-r border-border/80"
                               )}
                             >
                               <TooltipProvider delayDuration={150}>
