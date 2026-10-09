@@ -990,8 +990,14 @@ export function AfceTab({
                   <div
                     key={index}
                     className={cn(
-                      "p-3.5 rounded-lg border border-border bg-card/60 space-y-3 transition-opacity",
-                      isNotReq && "opacity-75 bg-muted/20"
+                      "p-3.5 rounded-lg border space-y-3 transition-colors",
+                      item.status === "APPROVED"
+                        ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-800/80 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 shadow-2xs"
+                        : item.status === "REJECTED"
+                        ? "border-rose-300 bg-rose-50/70 dark:border-rose-800/80 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 shadow-2xs"
+                        : isNotReq
+                        ? "opacity-75 bg-muted/20 border-dashed border-border"
+                        : "border-border bg-card/60"
                     )}
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-2">
@@ -1198,7 +1204,14 @@ export function AfceTab({
                         return (
                           <div
                             key={snap.id}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-2 rounded bg-background border border-border/70 text-xs gap-2"
+                            className={cn(
+                              "flex flex-col sm:flex-row sm:items-center justify-between p-2 rounded border text-xs gap-2 transition-colors",
+                              snap.status === "APPROVED"
+                                ? "bg-emerald-50/70 border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800/80 text-emerald-950 dark:text-emerald-100"
+                                : snap.status === "REJECTED"
+                                ? "bg-rose-50/70 border-rose-300 dark:bg-rose-950/40 dark:border-rose-800/80 text-rose-950 dark:text-rose-100"
+                                : "bg-background border-border/70"
+                            )}
                           >
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-semibold text-muted-foreground">

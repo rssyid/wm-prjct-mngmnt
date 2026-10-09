@@ -196,6 +196,7 @@ export function ProjectTimelineTab({
         currentWeek={project.currentWeek || 1}
         packages={sCurvePackages}
         logs={logs}
+        afceDocument={project.afceDocument}
       />
     </div>
   );

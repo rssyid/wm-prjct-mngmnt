@@ -28,12 +28,27 @@ export interface SCurveLog {
   logDate: string | Date;
 }
 
+export interface SCurveAfceInfo {
+  status?: string | null;
+  currentAttempt?: number;
+  emailSubmittedDate?: string | Date | null;
+  mcaApprovalDate?: string | Date | null;
+  approvals?: Array<{
+    role: string;
+    status: string;
+    approvalLevel?: number;
+    attemptNo?: number;
+    approvedAt?: string | Date | null;
+  }> | null;
+}
+
 interface ProjectSCurveChartProps {
   targetStartDate?: string | Date | null;
   targetEndDate?: string | Date | null;
   currentWeek?: number;
   packages: SCurvePackage[];
   logs: SCurveLog[];
+  afceDocument?: SCurveAfceInfo | null;
   className?: string;
 }
 
@@ -51,9 +66,10 @@ export function ProjectSCurveChart({
   currentWeek = 1,
   packages,
   logs,
+  afceDocument,
   className,
 }: ProjectSCurveChartProps) {
-  // Hitung rentang minggu dan data titik kurva S
+  // Hitung rentang minggu dan data titik kurva S (Bobot: AFCE 5%, Paket Fisik 95%)
   const { chartData, currentPlanPct, currentActualPct, variancePct } = useMemo(() => {
     // 1. Tentukan estimasi total minggu
     let weeksCount = 12; // default fallback
@@ -82,6 +98,44 @@ export function ProjectSCurveChart({
       logsByPackage.get(log.workPackageId)!.set(log.weekNo, log.progressPct);
     });
 
+    // 3. Persiapan Data Approval AFCE (Bobot 5%)
+    const activeAttemptNo = afceDocument?.currentAttempt ?? 1;
+    const activeApprovals =
+      afceDocument?.approvals?.filter((a) => (a.attemptNo ?? 1) === activeAttemptNo) ??
+      afceDocument?.approvals ??
+      [];
+    const requiredApprovals = activeApprovals.filter(
+      (a) => a.status !== "TIDAK_PERLU" && a.status !== "NOT_REQUIRED"
+    );
+    const totalRequired =
+      requiredApprovals.length > 0 ? requiredApprovals.length : activeApprovals.length || 1;
+
+    const isDocApproved = afceDocument?.status === "APPROVED";
+
+    let lastApprovedDate: Date | null = null;
+    const approvedSnapshots = activeApprovals.filter(
+      (a) => a.status === "APPROVED" && a.approvedAt
+    );
+    if (approvedSnapshots.length > 0) {
+      const latestTs = Math.max(
+        ...approvedSnapshots.map((a) => new Date(a.approvedAt!).getTime())
+      );
+      if (!isNaN(latestTs) && latestTs > 0) {
+        lastApprovedDate = new Date(latestTs);
+      }
+    }
+    if (!lastApprovedDate && afceDocument?.mcaApprovalDate) {
+      lastApprovedDate = new Date(afceDocument.mcaApprovalDate);
+    }
+
+    const projectStartTs = targetStartDate ? new Date(targetStartDate).getTime() : null;
+    const getWeekNumber = (date: Date) => {
+      if (!projectStartTs) return 1;
+      return Math.max(1, Math.ceil((date.getTime() - projectStartTs) / (7 * 24 * 60 * 60 * 1000)));
+    };
+
+    const finalApprovalWeekNo = lastApprovedDate ? getWeekNumber(lastApprovedDate) : 1;
+
     const data: ChartDataPoint[] = [];
 
     // Titik awal Minggu 0
@@ -95,15 +149,37 @@ export function ProjectSCurveChart({
 
     // Hitung tiap minggu dari 1 s/d finalTotalWeeks
     for (let w = 1; w <= finalTotalWeeks; w++) {
-      // Kurva Rencana Linear Kumulatif: akumulasi proporsional 0 s/d 100%
-      const planPct = Math.min(100, Math.round(((w / finalTotalWeeks) * 100) * 10) / 10);
+      // A. Rencana:
+      // Approval direncanakan 2 minggu: M1 = 2.5%, M2+ = 5.0%
+      const afcePlanPct = w === 1 ? 2.5 : 5.0;
+      // Paket kerja linear proporsional mengisi sisa 95%
+      const wpPlanPct = (w / finalTotalWeeks) * 95;
+      const planPct = Math.min(100, Math.round((afcePlanPct + wpPlanPct) * 10) / 10);
 
-      // Kurva Realisasi Kumulatif Tertimbang:
-      // Hanya dihitung sampai minggu berjalan (w <= activeCurrentWeek)
+      // B. Realisasi (hanya sampai activeCurrentWeek):
       let actualPct: number | null = null;
       let dev: number | null = null;
 
       if (w <= activeCurrentWeek) {
+        // 1) Realisasi Approval (Maks 5%)
+        let afceActualPct = 0;
+        if (isDocApproved) {
+          if (w >= finalApprovalWeekNo) {
+            afceActualPct = 5.0;
+          } else {
+            const approvedBeforeW = requiredApprovals.filter(
+              (a) => a.status === "APPROVED" && a.approvedAt && getWeekNumber(new Date(a.approvedAt)) <= w
+            );
+            afceActualPct = (approvedBeforeW.length / totalRequired) * 5.0;
+          }
+        } else if (afceDocument?.status === "SUBMITTED") {
+          const approvedBeforeW = requiredApprovals.filter(
+            (a) => a.status === "APPROVED" && a.approvedAt && getWeekNumber(new Date(a.approvedAt)) <= w
+          );
+          afceActualPct = (approvedBeforeW.length / totalRequired) * 5.0;
+        }
+
+        // 2) Realisasi Paket Fisik (Maks 95%)
         let weightedSum = 0;
         let totalWeight = 0;
 
@@ -125,11 +201,10 @@ export function ProjectSCurveChart({
           weightedSum += (latestProg * pkg.weightPct) / 100;
         });
 
-        // Normalisasi jika total bobot tidak persis 100%
-        const normalizedSum =
-          totalWeight > 0 ? (weightedSum / (totalWeight / 100)) : weightedSum;
+        const normalizedWpSum =
+          totalWeight > 0 ? (weightedSum / (totalWeight / 100)) * 95 : 0;
 
-        actualPct = Math.min(100, Math.round(normalizedSum * 10) / 10);
+        actualPct = Math.min(100, Math.round((afceActualPct + normalizedWpSum) * 10) / 10);
         dev = Math.round((actualPct - planPct) * 10) / 10;
       }
 
@@ -155,7 +230,7 @@ export function ProjectSCurveChart({
       currentActualPct: actualNow,
       variancePct: diffNow,
     };
-  }, [targetStartDate, targetEndDate, currentWeek, packages, logs]);
+  }, [targetStartDate, targetEndDate, currentWeek, packages, logs, afceDocument]);
 
   return (
     <Card className={cn("border-border shadow-xs", className)}>
@@ -167,7 +242,7 @@ export function ProjectSCurveChart({
               Kurva S: Rencana Linear vs Realisasi Tertimbang
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Perbandingan kumulatif progres rencana dan akumulasi log lapangan mingguan.
+              Akumulasi rencana linear & realisasi (Bobot: Approval AR/AFCE 5%, Paket Kerja Fisik 95%).
             </p>
           </div>
 

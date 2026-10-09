@@ -11,10 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  PACKAGE_CATEGORY_CONFIG,
-  normalizeApprovalRoleCode,
-} from "@/lib/constants/status";
+import { PACKAGE_CATEGORY_CONFIG } from "@/lib/constants/status";
 import { cn, formatDate } from "@/lib/utils";
 import { AfceStatus, PackageCategory } from "@prisma/client";
 import { Calendar, Check, FileCheck } from "lucide-react";
@@ -30,6 +27,8 @@ export interface AfceInfo {
   approvals?: Array<{
     role: string;
     status: string;
+    approvalLevel?: number;
+    attemptNo?: number;
     approvedAt?: string | Date | null;
   }> | null;
 }
@@ -231,7 +230,9 @@ export function ProjectMatrixGanttChart({
       // 3) Menentukan warna sel
       let styleType: CellStyleType = "EMPTY";
       if (isRevised) {
-        if (week.isCurrentWeek) {
+        // Warna oranye PASTI SELALU di akhir (minggu terakhir tanggal revisi target)
+        const isRevisedEndWeek = Boolean(rEnd && wStart <= rEnd && rEnd <= wEnd);
+        if (isRevisedEndWeek) {
           styleType = "THIS_WEEK_REVISED"; // Oranye
         } else {
           styleType = "REVISED"; // Kuning
@@ -289,31 +290,46 @@ export function ProjectMatrixGanttChart({
     let groupIndexCounter = 1;
 
     // A. Baris Administrasi & Pengesahan Dokumen AR / AFCE
-    // Cari tanggal paraf MCA atau level approval terakhir dari snapshots
-    const mcaApprovalSnapshot = afceDocument?.approvals?.find(
-      (a) => normalizeApprovalRoleCode(a.role) === "MCA" && a.status === "APPROVED"
+    // Cari level approval terakhir yang approve pada attempt aktif
+    const activeAttemptNo = afceDocument?.currentAttempt ?? 1;
+    const activeApprovals =
+      afceDocument?.approvals?.filter((a) => (a.attemptNo ?? 1) === activeAttemptNo) ??
+      afceDocument?.approvals ??
+      [];
+
+    const approvedSnapshots = activeApprovals.filter(
+      (a) => a.status === "APPROVED" && a.approvedAt
     );
-    const resolvedMcaApprovalDate =
-      afceDocument?.mcaApprovalDate ||
-      (mcaApprovalSnapshot?.approvedAt ? new Date(mcaApprovalSnapshot.approvedAt) : null);
+
+    // Level terakhir yang approve
+    let lastApprovedAt: Date | null = null;
+    if (approvedSnapshots.length > 0) {
+      const latestTs = Math.max(
+        ...approvedSnapshots.map((a) => new Date(a.approvedAt!).getTime())
+      );
+      if (!isNaN(latestTs) && latestTs > 0) {
+        lastApprovedAt = new Date(latestTs);
+      }
+    }
+
+    const resolvedFinalApprovalDate =
+      lastApprovedAt ||
+      (afceDocument?.mcaApprovalDate ? new Date(afceDocument.mcaApprovalDate) : null) ||
+      (milestones?.afceApprovedDate ? new Date(milestones.afceApprovedDate) : null);
 
     const afceStart =
       afceDocument?.emailSubmittedDate ||
       milestones?.afceSubmittedDate ||
       targetStartDate;
 
-    let afceEnd =
-      resolvedMcaApprovalDate ||
-      milestones?.afceApprovedDate;
-
-    if (!afceEnd && afceStart) {
-      const est = new Date(afceStart);
-      est.setDate(est.getDate() + 14); // default SLA estimasi review 14 hari
-      afceEnd = est;
-    }
+    // Rule: Plan persetujuan AFCE selalu 2 minggu (14 hari kalender)
+    const afcePlanStart = afceStart;
+    const afcePlanEnd = afceStart
+      ? new Date(new Date(afceStart).getTime() + 14 * 24 * 60 * 60 * 1000)
+      : null;
 
     const afceStatus = afceDocument?.status || (
-      resolvedMcaApprovalDate || milestones?.afceApprovedDate
+      resolvedFinalApprovalDate
         ? "APPROVED"
         : afceDocument?.emailSubmittedDate || milestones?.afceSubmittedDate
         ? "SUBMITTED"
@@ -328,46 +344,68 @@ export function ProjectMatrixGanttChart({
       const wStart = week.startDate.getTime();
       const wEnd = week.endDate.getTime();
 
-      const sTs = afceStart ? new Date(afceStart).getTime() : null;
-      const eTs = afceEnd ? new Date(afceEnd).getTime() : null;
-      const rawApprovalDate = resolvedMcaApprovalDate || milestones?.afceApprovedDate;
-      const appTs = rawApprovalDate ? new Date(rawApprovalDate).getTime() : null;
+      const sTs = afcePlanStart ? new Date(afcePlanStart).getTime() : null;
+      const pEndTs = afcePlanEnd ? new Date(afcePlanEnd).getTime() : null;
+      const appTs = resolvedFinalApprovalDate
+        ? new Date(resolvedFinalApprovalDate).getTime()
+        : null;
 
-      const isPlanRange = Boolean(sTs && eTs && !(wEnd < sTs || wStart > eTs));
+      // Plan 2 minggu (W1 dan W2)
+      const isPlanRange = Boolean(sTs && pEndTs && !(wEnd < sTs || wStart > pEndTs));
 
       let styleType: CellStyleType = "EMPTY";
       let symbol = "";
 
       if (isApproved) {
-        // Fallback tanggal persetujuan efektif: bila appTs null, fallback ke eTs atau sTs
-        const effectiveApprovalTs = appTs || eTs || sTs;
+        // Efektif tanggal selesai persetujuan
+        const effectiveApprovalTs = appTs || sTs;
 
-        if (effectiveApprovalTs && wStart <= effectiveApprovalTs && effectiveApprovalTs <= wEnd) {
+        if (isPlanRange) {
           styleType = "PLAN";
+        } else if (
+          effectiveApprovalTs &&
+          wStart <= effectiveApprovalTs &&
+          effectiveApprovalTs <= wEnd
+        ) {
+          styleType = "REVISED";
+        }
+
+        // Simbol: Checkmark (✓) di minggu selesai persetujuan
+        if (
+          effectiveApprovalTs &&
+          wStart <= effectiveApprovalTs &&
+          effectiveApprovalTs <= wEnd
+        ) {
           symbol = "✓";
-        } else if (sTs && effectiveApprovalTs && wEnd >= sTs && wStart <= effectiveApprovalTs) {
-          styleType = "PLAN";
+        } else if (
+          sTs &&
+          effectiveApprovalTs &&
+          wEnd >= sTs &&
+          wEnd < effectiveApprovalTs
+        ) {
+          // Minggu sebelum selesai diberi tanda '#'
           symbol = "#";
-        } else if (isPlanRange) {
-          styleType = "PLAN";
         }
       } else if (isSubmitted) {
-        const isOverdue = eTs && wStart > eTs;
+        const isOverdue = pEndTs && wStart > pEndTs;
         if (isOverdue) {
           styleType = week.isCurrentWeek ? "THIS_WEEK_REVISED" : "REVISED";
         } else if (isPlanRange) {
           styleType = "PLAN";
         }
 
-        if (sTs && wEnd >= sTs && wStart <= Math.max(now.getTime(), eTs || 0)) {
+        if (sTs && wEnd >= sTs && wStart <= now.getTime()) {
           symbol = "#";
         }
       } else if (isRejected) {
-        if (eTs && wStart > eTs) {
+        if (pEndTs && wStart > pEndTs) {
           styleType = "REVISED";
           symbol = "#";
         } else if (isPlanRange) {
           styleType = "PLAN";
+          if (sTs && wEnd >= sTs && wStart <= now.getTime()) {
+            symbol = "#";
+          }
         }
       } else {
         if (isPlanRange) {
@@ -387,7 +425,7 @@ export function ProjectMatrixGanttChart({
       } else if (styleType === "REVISED") {
         tooltipDesc = `Target Persetujuan AR/AFCE Terlambat`;
       } else if (styleType === "PLAN") {
-        tooltipDesc = `Jadwal Pengajuan & Pengesahan AR/AFCE`;
+        tooltipDesc = `Jadwal Pengajuan & Pengesahan AR/AFCE (Rencana 2 Minggu)`;
       }
 
       return {
@@ -416,8 +454,8 @@ export function ProjectMatrixGanttChart({
             ? "Status: Menunggu Persetujuan"
             : "Status: Persiapan Dokumen",
           isAfce: true,
-          planStartDate: afceStart,
-          planEndDate: afceEnd,
+          planStartDate: afcePlanStart,
+          planEndDate: afcePlanEnd,
           evaluateCell: evaluateAfceCell,
         },
       ],
@@ -592,26 +630,45 @@ export function ProjectMatrixGanttChart({
                   <React.Fragment key={group.id}>
                     {/* Header Kategori (Grup Utama: 1. Administrasi AFCE, 2. Material, dll) */}
                     <tr className="bg-muted/40 font-bold text-foreground">
-                      <td
-                        colSpan={4 + weeks.length}
-                        className="px-3 py-1.5 border-y border-border text-left"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-primary font-bold">
-                            {group.groupIndex}. {group.label}
-                          </span>
-                          {group.badgeCount !== undefined && (
-                            <span className="text-[10px] font-normal text-muted-foreground">
-                              ({group.badgeCount} paket)
+                      {currentWeekIndex >= 0 && currentWeekIndex < weeks.length ? (
+                        <>
+                          <td
+                            colSpan={4 + currentWeekIndex}
+                            className="px-3 py-1.5 border-y border-border text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary font-bold">
+                                {group.groupIndex}. {group.label}
+                              </span>
+                              {group.badgeCount !== undefined && (
+                                <span className="text-[10px] font-normal text-muted-foreground">
+                                  ({group.badgeCount} paket)
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td
+                            colSpan={weeks.length - currentWeekIndex}
+                            className="border-y border-border border-l-2 border-l-rose-500 bg-rose-50/20 dark:bg-rose-950/10"
+                          />
+                        </>
+                      ) : (
+                        <td
+                          colSpan={4 + weeks.length}
+                          className="px-3 py-1.5 border-y border-border text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-primary font-bold">
+                              {group.groupIndex}. {group.label}
                             </span>
-                          )}
-                          {group.isAfceGroup && (
-                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-xs border border-emerald-300">
-                              Gerbang Persetujuan Proyek
-                            </span>
-                          )}
-                        </div>
-                      </td>
+                            {group.badgeCount !== undefined && (
+                              <span className="text-[10px] font-normal text-muted-foreground">
+                                ({group.badgeCount} paket)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
 
                     {/* Baris Tiap Item Pekerjaan */}
