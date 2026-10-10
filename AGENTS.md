@@ -9,7 +9,7 @@ Urutan membaca bergantung jenis pekerjaan:
 | Jika pekerjaanmu menyentuh... | Baca DULU (wajib, bukan opsional) |
 |-------------------------------|-----------------------------------|
 | Transisi status, approval, kiriman barang, BAST, cancel/hold | `docs/WORKFLOW.md` → `docs/API.md` |
-| Skema, query, model Prisma | `docs/DATABASE.md` → `docs/WORKFLOW.md` |
+| Skema, query, model Prisma, hierarki wilayah | `docs/DATABASE.md` → `docs/LOCATION_HIERARCHY.md` → `docs/WORKFLOW.md` |
 | Endpoint/route handler baru | `docs/API.md` → `docs/Rules.md` §4 |
 | Komponen UI, tabel, filter, warna | `docs/design.md` → `docs/Rules.md` §3 |
 | Deploy, env, storage, cache | `docs/DEPLOYMENT.md` → `docs/STACK.md` |

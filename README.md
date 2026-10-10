@@ -45,6 +45,7 @@ Setiap pengembangan dan integrasi sistem mengacu pada dokumentasi terpadu di fol
 
 - [`docs/PRD.md`](docs/PRD.md) — Product Requirements Document, user stories, dan acceptance criteria.
 - [`docs/DATABASE.md`](docs/DATABASE.md) — Skema database Prisma, relasi, indeks, dan aturan integritas data.
+- [`docs/LOCATION_HIERARCHY.md`](docs/LOCATION_HIERARCHY.md) — Struktur hierarki wilayah operasional kebun (OPS, Region, Company, Estate, Block).
 - [`docs/WORKFLOW.md`](docs/WORKFLOW.md) — State machine proyek T1–T10, aturan bisnis B1–B14, dan alur approval.
 - [`docs/API.md`](docs/API.md) — Spesifikasi REST API, route handlers, query params laporan, dan format respons.
 - [`docs/design.md`](docs/design.md) — Standar desain UI/UX, sistem warna status, tabel 6-kolom padat, dan guideline komponen.
