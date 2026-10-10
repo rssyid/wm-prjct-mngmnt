@@ -20,6 +20,8 @@ Tidak berubah dari v1 (kebab-case file, PascalCase komponen, `use-xxx` hooks, `x
 - 🆕 State filter halaman list WAJIB via nuqs (query string), bukan `useState` lokal.
 - 🆕 Fetch & mutasi client WAJIB via TanStack Query; setelah mutasi gunakan `invalidateQueries`, bukan manipulasi state manual.
 - 🆕 Komponen tabel data WAJIB TanStack Table + styling shadcn; jangan render `<table>` mentah untuk data > 20 baris.
+- 🆕 Input angka uang/kuantitas besar WAJIB menggunakan `FormattedNumberInput` (separator ribuan otomatis, auto-select nol saat fokus).
+- 🆕 Format tanggal pada tabel data padat WAJIB hemat ruang: gunakan helper `formatDayMonth` (`dd/mm`).
 
 ## 4. Route Handler Pattern
 

@@ -30,23 +30,29 @@ Dipertahankan: Inter + JetBrains Mono via `next/font/google` (subset Latin). Kol
 |-----------|---------|---------|
 | Primitif UI | shadcn/ui + Radix | Sumber komponen dasar; `npx shadcn@latest add` |
 | Tabel data-dense | **TanStack Table** (headless, styling tetap shadcn) | Sorting/filter instan; opsi virtualisasi untuk 1.000+ baris |
+| Input Angka Berformat | `FormattedNumberInput` | Separator koma/ribuan dinamis, seleksi otomatis angka 0 saat fokus |
 | Command palette | **cmdk** (Ctrl+K / ⌘K) | Lompat ke proyek/halaman/aksi cepat |
 | State filter via URL | **nuqs** | Filter list masuk query string → shareable, back-button bekerja |
 | Fetch client | **TanStack Query** | Cache + dedupe + interval; mengurangi hit ke function/Neon |
-| Chart | Recharts (warna dari token CSS) | Lazy-load |
-| Peta | react-leaflet via `next/dynamic ssr:false` | Lazy-load |
+| Chart | Recharts (warna dari token CSS) | Lazy-load; Kurva S sinkron cut-off |
+| Peta & Spasial | react-leaflet + `shpjs` | Lazy-load; parsing ESRI Shapefile ZIP |
 | Export | jsPDF + jsPDF-autotable, xlsx | Import dinamis saat tombol export ditekan |
-| Ikon | hanya `lucide-react` | h-4 w-4 inline, h-5 w-5 nav |
-| Animasi | Transisi CSS saja (`transition-all duration-150 ease-out`) | Tanpa library animasi berat |
+| Animasi & Transisi | `motion` (Framer Motion v14) | Transisi halus, quotes login, tab switcher |
+| Ikon & Avatar | `lucide-react` & Dicebear API | h-4 w-4 inline, h-5 w-5 nav |
 
 ## 5. Pola UX Wajib
 
 - **Loading:** skeleton menyerupai bentuk konten (baris tabel → baris skeleton; KPI → kartu skeleton). Spinner hanya di tombol submit.
 - **Empty state:** ikon + kalimat + CTA tunggal.
-- **Form:** label di atas, `*` wajib, Zod `.refine()` dipakai bersama client & server via react-hook-form.
+- **Form:** label di atas, `*` wajib, Zod `.refine()` dipakai bersama client & server via react-hook-form. Komponen angka besar wajib memakai `FormattedNumberInput`.
 - **Feedback:** toast/FeedbackModal; sukses auto-close 3 detik; error tetap sampai ditutup.
 - **Destruktif:** `AlertDialog` (hapus, cancel, ON_HOLD dengan alasan wajib).
 - **Filter persisten:** semua filter halaman list ditulis ke URL via nuqs; refresh/back tidak menghilangkan konteks.
+- **Tabel Laporan 6 Kolom Padat:**
+  - Standar kolom: `(1) Chevron/Indent ↳` → `(2) Paket & Rekanan` → `(3) Pengadaan & Logistik` → `(4) Realisasi Fisik & Volume` → `(5) Jadwal Lapangan` → `(6) Aksi`.
+  - Warna bar progres: Hijau (`bg-emerald-500`) untuk fisik, Biru/Sky (`bg-sky-500`) untuk murni material.
+  - Perataan titik dua vertikal sejajar menggunakan CSS Grid (`grid grid-cols-[XXpx_1fr]`).
+  - Header pembatas Folder Kategori proyek untuk keterbacaan tinggi.
 - **Aksesibilitas:** kontras WCAG AA, ring fokus terlihat, ikon-button punya `aria-label`, navigasi keyboard bekerja (termasuk di command palette & tabel).
 
 ## 6. Layout & Responsif

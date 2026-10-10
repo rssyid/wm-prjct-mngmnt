@@ -38,8 +38,8 @@ Satu sumber kebenaran (single source of truth) untuk seluruh siklus hidup proyek
 | F-05 | Pengadaan: AFCE/AR (checklist, approval berjenjang dengan attempt history, supplementary paralel); WorkPackage (PR/PO, vendor, nilai); kedatangan berulang per item; dokumen PR/PO/DO/Invoice | P0 |
 | F-06 | Realisasi: progres mingguan (1 log/paket/minggu), log alat berat, pembayaran per paket, BAST (verifikasi SUPER_ADMIN) | P0 |
 | F-07 | Manajemen proyek: state machine (lihat WORKFLOW.md), EWS/SLA, ON_HOLD/CANCELLED, soft delete berantai, dashboard | P0 |
-| F-08 | Gantt chart & S-Curve (rencana vs realisasi per paket; portofolio) | P1 |
-| F-09 | Laporan & export PDF/Excel: status proyek, pengadaan outstanding (paket belum LUNAS), realisasi anggaran | P1 |
+| F-08 | Gantt Chart & S-Curve WBS Matriks: pemisahan jadwal pengadaan & fisik lapangan, kurva S tersinkronisasi cut-off mingguan dan baseline, spreadsheet-style matrix | P1 |
+| F-09 | Laporan & Export (PDF & Excel): 3 Tab terpadu (Tab 1: Overview & PDF Status, Tab 2: Matriks Persetujuan 9-Role SAP + Excel, Tab 3: Progres Siklus Hidup & Rincian Paket 6-Kolom + Excel) | P1 |
 
 ### 4.1 Alur Status
 
@@ -56,11 +56,12 @@ Lihat `WORKFLOW.md` §1–2 (sumber kebenaran). Ringkasan:
 
 **US-03 — Mencatat Realisasi Lapangan**
 > Sebagai **PIC**, saya input progres mingguan per paket (%, volume, foto opsional, cuaca, tinggi air), agar realisasi bisa dibandingkan rencana.
-- AC: maksimal 1 log per paket per minggu; koreksi hanya untuk minggu berjalan; agregat bobot dihitung ulang otomatis di server; tidak bisa input tanggal masa depan.
+- AC: maksimal 1 log per paket per minggu; koreksi hanya untuk minggu berjalan; agregat bobot dihitung ulang otomatis di server; tidak bisa input tanggal masa depan. Tanggal selesai fisik tercatat otomatis saat mencapai 100%.
 
-**US-04 — Memantau Portofolio** — tidak berubah; tambahan AC: jumlah badge navbar konsisten dengan dashboard (keduanya membaca cache yang sama).
+**US-04 — Memantau Portofolio & Laporan**
+> Sebagai **Manajemen / HO**, saya memantau portofolio proyek melalui 3 tab laporan interaktif: Overview Status, Matriks Persetujuan AR (9 Role SAP), dan Rincian Paket Kerja (6 Kolom padat dengan kategori proyek terkelompok).
 
-## 6. Keputusan Bisnis (dari sesi 07/10/2026)
+## 6. Keputusan Bisnis (dari sesi 07/10/2026 & Pembaruan Terkini)
 
 1. Approval dicatat paraf oleh WM_HO_Specialist atas nama approver; berjenjang ketat; penolakan → attempt baru, history disimpan, tanpa batas pengajuan ulang.
 2. AR tambahan (supplementary) paralel, tidak dibatasi, tidak mengubah status proyek.
@@ -68,6 +69,9 @@ Lihat `WORKFLOW.md` §1–2 (sumber kebenaran). Ringkasan:
 4. Proyek boleh COMPLETED walau ada paket belum LUNAS; BAST diverifikasi SUPER_ADMIN; COMPLETED = read-only abadi.
 5. Cancel proyek hanya SUPER_ADMIN; COMPLETED tidak bisa dibatalkan/ditahan.
 6. Foto progres opsional (tidak diwajibkan per log).
+7. Paket murni material (`hasPhysicalWork = false`) tidak memiliki jadwal fisik; progres dihitung dari persentase penerimaan barang dan ditampilkan dengan bar biru/sky.
+8. Matriks approval AR mengadopsi 9 role standar SAP dengan dukungan penandaan `[TIDAK_PERLU]` (badge NA abu-abu).
+9. Tabel rincian paket kerja distandarisasi menjadi 6 kolom tematik padat untuk menghindari scroll horizontal berlebih.
 
 ## 7. Non-Functional Requirements
 

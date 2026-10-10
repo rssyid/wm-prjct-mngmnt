@@ -328,3 +328,29 @@ klik-persisnya. Tandai di docs/task.md bahwa UAT dilaksanakan.
 
 **Uji akhir (Anda sendiri):** jalankan skenario penuh tanpa error; coba rusak aturan (approve lompat level, edit COMPLETED, kode duplikat) → semuanya ditolak dengan pesan Indonesia.
 **Commit:** `test: uat 3 role alur penuh` → aplikasi selesai, go-live.
+
+---
+
+## P16 — Pembaruan Laporan 3-Tab & WBS Matriks (Phase F)
+
+```
+/plan Baca docs/PRD.md (F-08 & F-09), docs/WORKFLOW.md (B12, B13), docs/design.md §4, docs/API.md §3.6.
+
+Kerjakan penyempurnaan UI/UX WBS dan Laporan:
+1. WBS Matriks Gantt & Kurva S:
+   - Dukungan paket kerja Dual-Track: paket murni pengadaan material (`hasPhysicalWork = false`)
+     hanya menampilkan bar pengadaan & kedatangan material (sky-500); paket dengan pekerjaan fisik
+     lapangan (`hasPhysicalWork = true`) menampilkan dual timeline (pengadaan + fisik lapangan emerald-500).
+   - Auto-sync tanggal selesai aktual lapangan (`actualEndDate`) saat progres fisik mencapai 100%.
+2. Halaman Laporan Terpadu (`/reports`):
+   - 3 Tab navigasi: "Ringkasan Eksekutif" (View 1), "Progres & Fisik Lapangan" (View 2), dan "Pengadaan & Material" (View 3).
+   - Format Tabel 6-Kolom Padat pada View 2: Nama Proyek & Lokasi, Status & Periode, Bobot & Deviasi,
+     Timeline Rencana vs Aktual (dd/mm), Realisasi Mingguan (Bobot Tertimbang), dan Dokumentasi Lapangan.
+   - Filter Multi-Select Perusahaan (`nuqs`), status multi-filter, dan rentang tanggal.
+   - Export dinamis Client-Side: jsPDF / autotable untuk PDF lanskap rapi & xlsx untuk spreadsheet multi-sheet.
+3. Build hijau, update checkbox docs/task.md (Phase F).
+```
+
+**Uji:** Buka WBS paket non-fisik → bar material tampil warna sky; buat progres 100% pada paket fisik → tanggal aktual auto-sync ke tanggal log; buka /reports → tabel 6 kolom muat tanpa scroll horizontal, export PDF & Excel berhasil.
+**Commit:** `feat: laporan 3 tab padat, wbs matriks dual-track pengadaan dan fisik`
+

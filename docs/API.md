@@ -46,6 +46,7 @@
 | POST/PUT/DELETE | `/api/projects/[id]/equipment` | Log alat berat |
 | PUT | `/api/projects/[id]/bast` | Upsert BAST (upload draf) |
 | POST | `/api/projects/[id]/bast/verify` | Verifikasi BAST — **SUPER_ADMIN saja** → COMPLETED |
+| GET | `/api/reports?type=...` | Endpoint Laporan Terpadu: `project-status`, `procurement-outstanding`, `budget-realization`, `approval-matrix`, `project-progress` (lihat §3.6) |
 
 ## 3. Endpoint Krusial
 
@@ -77,6 +78,22 @@ Efek dalam satu transaksi: insert `PackageDelivery` + `PackageDeliveryItem`; aku
 
 ### 3.5 `POST /api/projects/[id]/bast/verify`
 Role: SUPER_ADMIN. Body kosong atau `{ "notes": "..." }`. Mengisi `verifiedAt`, `verifiedById`, proyek → `COMPLETED`. **Tidak ada syarat LUNAS** (B8).
+
+### 3.6 `GET /api/reports`
+Mendukung 5 jenis laporan operasional terpusat via query param `type`:
+- `project-status`: Status proyek komprehensif, KPI agregat (total, avg progress, counts per indicator).
+- `procurement-outstanding`: Paket dengan paymentStatus != LUNAS atau belum DELIVERED/COMPLETED + kalkulasi delay hari.
+- `budget-realization`: Perbandingan total anggaran rencana vs komitmen kontrak/PO vs realisasi bayar.
+- `approval-matrix`: Matriks persetujuan AR 9-role SAP, approval attempt terkini, activeWaitingRole & SLA review days, penanganan role tidak perlu (`TIDAK_PERLU`).
+- `project-progress`: Progres siklus hidup lengkap (Survei s/d BAST) dan rincian paket kerja 6-kolom dengan kategori proyek terkelompok.
+
+**Parameter Filter Bersama:**
+- `companyIds`: daftar ID perusahaan dipisahkan koma (multi-select filter berbasis Region).
+- `companyId`: fallback ID perusahaan tunggal atau "ALL".
+- `status`: filter `ProjectStatus`.
+- `statusIndicator`: filter `StatusIndicator` (ON_TRACK, AT_RISK, DELAYED, COMPLETED).
+- `search`: pencarian teks pada nama proyek atau kode proyek.
+- `startDate` & `endDate`: rentang waktu berdasarkan tanggal target proyek.
 
 ## 4. Query Parameter List Proyek
 

@@ -158,8 +158,8 @@ Index: `@@index([afceDocumentId, attemptNo])`, `@@index([workPackageId])`.
 | vendorId / vendorName | String? / String? | FK + denormalisasi |
 | picName | String? | |
 | weightPct | Float | default 0; Σ per proyek = 100 |
-| progressPct | Float | default 0; diupdate service |
-| targetQuantity / uom / volumeAchieved | Float? / String? / Float? | |
+| progressPct | Float | default 0; diupdate service dari ProgressLog atau penerimaan material |
+| targetQuantity / uom / volumeAchieved | Float? / String? / Float? | volume capaian dari log atau akumulasi alat berat |
 | noPrUspk / prUspkDate | String? / DateTime? | tahap PR/USPK |
 | noPoSpk / poSpkDate | String? / DateTime? | tahap PO/SPK |
 | contractOrPoAmount | Decimal(18,2) | default 0 |
@@ -167,13 +167,16 @@ Index: `@@index([afceDocumentId, attemptNo])`, `@@index([workPackageId])`.
 | actualDeliveryDate | DateTime? | cache = tanggal kiriman TERAKHIR (auto dari PackageDelivery) |
 | paymentStatus | PaymentStatus | default BELUM_LUNAS |
 | paidAmount / paidDate | Decimal(18,2)? / DateTime? | |
-| planStartDate / planEndDate | DateTime? | rencana (Gantt) |
-| actualStartDate / actualEndDate | DateTime? | realisasi (Gantt) |
-| revisedEndDate | DateTime? | target selesai revisi (Gantt matriks) |
+| procurementPlanStartDate / procurementPlanEndDate | DateTime? | Jadwal rencana pengadaan (Gantt Chart baris atas) |
+| procurementRevisedEndDate | DateTime? | Jadwal revisi pengadaan |
+| hasPhysicalWork | Boolean | default true; jika false = murni pengadaan / material saja |
+| planStartDate / planEndDate | DateTime? | rencana fisik lapangan (Gantt Chart baris bawah) |
+| actualStartDate / actualEndDate | DateTime? | realisasi fisik: auto-sync dari log pertama (>0%) & log selesai (100%) |
+| revisedEndDate | DateTime? | target selesai revisi fisik (Gantt matriks) |
 | status | PackageStatus | default DRAFT |
-| remarks | String? | |
+| remarks | String? | alasan keterlambatan/override manual DELIVERED |
 | createdById | String? | FK→User |
-| deletedAt | DateTime? | |
+| deletedAt | DateTime? | soft delete berantai |
 
 > Catatan: tidak ada kolom `deliveryStatus` (redundan dengan `status`); nomor DO pindah ke `PackageDelivery.deliveryOrderNo`.
 
@@ -244,3 +247,5 @@ Index: `@@index([entity, entityId])`, `@@index([userId])`.
 5. Soft delete berantai (B11); semua list filter `deletedAt: null`.
 6. Kode proyek dari counter dalam transaksi yang sama (B10); tidak pernah dipakai ulang.
 7. Paket `DELIVERED` bila ΣqtyReceived ≥ ΣqtyPlanned (override manual wajib `remarks`).
+8. **Dual-Track Paket Kerja**: Paket bertanda `hasPhysicalWork = false` (Material/Logistik Saja) tidak memiliki baris jadwal fisik lapangan dan progres diukur dari pemenuhan volume kedatangan barang. Bar progres ditampilkan dengan warna biru/sky di tabel laporan.
+9. **Sinkronisasi Tanggal Selesai Aktual**: `actualStartDate` dan `actualEndDate` pada `WorkPackage` disinkronkan otomatis di service: `actualStartDate` dari tanggal log pertama dengan progress > 0%, dan `actualEndDate` dari log saat progress mencapai 100%. Koreksi progres di bawah 100% pada minggu berjalan akan mereset `actualEndDate` kembali ke `null`.

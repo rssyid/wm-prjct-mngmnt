@@ -11,7 +11,7 @@
 - [x] Migrasi uang `Float` → `Decimal(18,2)` — SEBELUM data transaksi menumpuk
 - [x] Status String → enum: PackageStatus, AfceStatus, ApprovalStatus
 - [x] `@@index` lengkap sesuai DATABASE.md v2
-- [ ] Pasang zod + react-hook-form + @hookform/resolvers; ESLint + Prettier + Husky/lint-staged
+- [x] Pasang zod + react-hook-form + @hookform/resolvers; ESLint + Prettier + Husky/lint-staged
 
 ## Phase B — Model & Service Baru
 
@@ -56,9 +56,18 @@
 - [x] Konstanta status terpusat `lib/constants/status.ts` (skeleton & kartu mobile pada fase tabel)
 - [x] Font Inter + JetBrains Mono via next/font; dark mode kontras ditingkatkan
 - [x] AlertDialog + alasan wajib untuk HOLD/CANCEL; audit aksesibilitas
-- [ ] Pecah `projects/[id]/page.tsx` menjadi komponen domain
+- [x] Pecah `projects/[id]/page.tsx` menjadi komponen domain tab terpisah (afce-tab, bast-tab, realization-tab, timeline-tab, equipment-log-table)
 
-## Phase F — Rilis
+## Phase F — Pembaruan Laporan & WBS Matriks (Terkini)
+
+- [x] Matriks Persetujuan AR 9-Role Standar SAP dengan SLA review days dan penandaan `[TIDAK_PERLU]` (badge NA abu-abu)
+- [x] Gantt chart matriks mingguan spreadsheet-style WBS dengan pemisahan jadwal pengadaan vs jadwal fisik
+- [x] Sinkronisasi Kurva S mingguan rencana vs aktual terhadap cut-off akhir minggu berjalan
+- [x] Restrukturisasi tabel rincian paket kerja menjadi 6 kolom tematik padat bebas scroll horizontal
+- [x] Pemisahan visual bar progres fisik lapangan (hijau) vs kedatangan material (sky)
+- [x] FormattedNumberInput dengan pemisah ribuan otomatis
+
+## Phase G — Rilis & Go-Live
 
 - [x] `.env.example` final (R2, Upstash, Sentry, CRON_SECRET)
 - [x] GitHub Actions CI workflow (`.github/workflows/ci.yml`) siap & verifikasi build hijau

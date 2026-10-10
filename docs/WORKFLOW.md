@@ -49,7 +49,21 @@ Status khusus: `ON_HOLD` (dari status aktif mana pun, kecuali COMPLETED) dan `CA
 - **B9 — Imutabilitas akhir.** `COMPLETED` = read-only: semua endpoint mutasi untuk proyek tersebut menolak dengan 409 "Proyek sudah selesai dan terkunci". Tidak bisa CANCELLED maupun ON_HOLD.
 - **B10 — Kode proyek abadi.** Format `WM-{COMPANY_CODE}-{YYYY}-{SEQ4}` (mis. `WM-CMP01-2026-0042`). Nomor urut per company per tahun, reset setiap tahun, **tidak pernah dipakai ulang** termasuk setelah hard delete. Implementasi: tabel `ProjectCodeCounter` + increment dalam transaksi (lihat DATABASE.md v2 §10).
 - **B11 — Soft delete berantai.** Hapus proyek mengisi `deletedAt` pada Project dan seluruh anak (WorkPackage, ProgressLog, HeavyEquipmentLog, PackageDelivery, dokumen). Restore memulihkan semuanya. Hanya SUPER_ADMIN yang bisa restore/purge.
+- **B12 — Dual-Track Paket Kerja (Pengadaan Murni vs Fisik Lapangan).** Paket kerja bertipe `hasPhysicalWork = false` (Material Saja) hanya memiliki lini pengadaan logistik, tanpa jadwal fisik lapangan. Progresnya mencerminkan pemenuhan kedatangan volume material (100% saat barang tiba lengkap). Di antarmuka laporan, bar progres paket material ditampilkan dengan aksen biru/sky.
+- **B13 — Sinkronisasi Otomatis Tanggal Selesai Fisik.** Tanggal realisasi fisik (`actualStartDate` dan `actualEndDate`) pada paket fisik disinkronkan otomatis dari riwayat `ProgressLog`: `actualStartDate` dari log pertama yang mulai bekerja (>0%), dan `actualEndDate` otomatis tercatat saat progres mencapai 100%.
+- **B14 — Matriks Persetujuan 9-Role Standar SAP.** Persetujuan AR diatur berjenjang mengikuti 9 role standar SAP (Estate Manager, Area Manager, VP, MCA, hingga Direktur/CEO). Role yang tidak relevan untuk proyek tertentu dapat ditandai `[TIDAK_PERLU]` (badge NA abu-abu) dan tidak menghalangi kelanjutan approval ke jenjang berikutnya.
 
-## 4. EWS / Status Indicator
+## 4. State Machine Paket Pengadaan (WorkPackage)
+
+```
+DRAFT --[Input No PR / USPk]--> PR_SUBMITTED
+PR_SUBMITTED --[Input No PO / SPK]--> PO_ISSUED
+PO_ISSUED --[Kiriman Pertama Berjalan]--> IN_DELIVERY
+IN_DELIVERY --[Sebagian Item Diterima]--> PARTIALLY_DELIVERED
+PARTIALLY_DELIVERED / IN_DELIVERY --[Σ qtyReceived ≥ planned / Override]--> DELIVERED
+DELIVERED / Pekerjaan Lapangan Tuntas --> COMPLETED
+```
+
+## 5. EWS / Status Indicator
 
 Tidak berubah: `lib/sla.ts` membandingkan progres aktual vs rencana linear (hari kerja dikurangi tabel `Holiday`). Beku saat ON_HOLD. Prasyarat: `Holiday` wajib terisi per tahun — jika tahun berjalan tidak punya data libur, SLA fallback ke kalender 7 hari dan UI menampilkan peringatan di halaman master.

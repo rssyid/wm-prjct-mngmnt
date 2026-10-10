@@ -15,6 +15,10 @@
 | CI/CD | **GitHub Actions** (repo privat) | 2.000 menit, 500 MB artifact | Lint + typecheck + build saja; deploy ditangani Vercel Git Integration |
 | Monitoring | **Vercel Logs + Sentry Free** | Vercel simpan runtime log 1 jam; Sentry untuk jejak error jangka panjang | Setup Sentry sejak awal sebelum user aktif |
 | Auth / ORM / UI | NextAuth v4 JWT, Prisma 5, Next.js 14 + Tailwind + shadcn/ui | — | Tidak berubah dari Architecture.md |
+| Spasial / GIS | **Leaflet + shpjs** | Client-side memory | Peta interaktif & import Shapefile ZIP (.shp, .dbf) |
+| Reporting & Export | **SheetJS (xlsx) + jsPDF + autotable** | Dynamic import | Ekspor Excel 3 tab dan laporan PDF tanpa membebani bundle |
+| Animasi & Tema | **motion (Framer Motion v14) + next-themes** | Client-side | Transisi mikro, quotes login, dan dark mode terpadu |
+| S3 Client | **@aws-sdk/client-s3 + presigner** | Server-side | Komunikasi presigned URL dengan Cloudflare R2 |
 
 ## 2. Masalah Performa Utama: Cold Start Neon
 
