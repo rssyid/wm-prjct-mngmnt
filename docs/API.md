@@ -50,8 +50,16 @@
 
 ## 3. Endpoint Krusial
 
-### 3.1 `POST /api/projects`
-Request tidak berubah dari v1. Response `201`: `projectCode` berformat `WM-CMP01-2026-0042` (dari `ProjectCodeCounter` dalam transaksi). Duplikasi kode mustahil by design; bila race terjadi, DB constraint menolak → 409.
+### 3.1 `POST /api/projects` & Master Data
+- **Pembuatan Proyek (`POST /api/projects`)**: Response `201` menghasilkan `projectCode` unik berformat `WM-{COMPANY}-{YYYY}-{SEQ4}` via `ProjectCodeCounter` atomik. Menerima payload komprehensif termasuk `budgetType`, `locationType`, `geoCoordinates` (GeoJSON), `constructionPlanStartDate`, `constructionPlanEndDate`, dan target baseline.
+- **Master Data (`/api/master?type=...`)**:
+  - `type=region`: Kode, nama, operasional (`ops`), dan nomor urut tampilan (`order`).
+  - `type=company`: Kode, nama, alias operasional (`alias`), wilayah (`ops`), nomor urut (`order`), dan `regionId`.
+  - `type=estate`: Kode, nama kebun, `companyId`, `ops`, `region`, grup kebun (`group`), kode baru (`estateNew`), kode warisan (`legacyCode`), dan urutan (`order`).
+  - `type=block`: `estateId`, `blockCode`, `name`, `plantingYear`, dan luas hektar `areaHectares`.
+  - `type=item`: Master material, mendukung batch import via spreadsheet Excel (`itemImportBatchSchema`).
+  - `type=holiday`: Master hari libur, mendukung bulk CSV/JSON upload array (`holidayBulkSchema`).
+  - `type=vendor`, `type=uom`, `type=category`, `type=structure`, `type=variant` (termasuk template `defaultBoqItems`).
 
 ### 3.2 `PUT /api/projects/[id]/afce`
 - Mengisi `rabReady=true` → sistem set proyek `RAB_READY` (bila masih SURVEY) dan `emailSubmitted=true` → `WAITING_AFCE_AR`, di transaksi yang sama.
@@ -65,7 +73,14 @@ Request tidak berubah dari v1. Response `201`: `projectCode` berformat `WM-CMP01
 ```
 `action`: `START_SURVEY | START_PHYSICAL_WORK | REQUEST_BAST | HOLD | RESUME | CANCEL`. `HOLD` wajib `reason`; `CANCEL` hanya SUPER_ADMIN; service memvalidasi terhadap tabel T1–T10 (WORKFLOW.md) → transisi ilegal = 409.
 
-### 3.4 `POST /api/projects/[id]/packages/[packageId]/deliveries`
+### 3.4 `POST / PUT /api/projects/[id]/packages`
+- **Gerbang B3**: Ditolak 403 bila `AfceDocument.status != APPROVED`.
+- **Dual-Track Scheduling**:
+  - `hasPhysicalWork = true` (default): Paket konstruksi/fisik wajib memiliki jadwal pengadaan (`procurementPlanStartDate` s/d `procurementPlanEndDate`) dan jadwal fisik lapangan (`planStartDate` s/d `planEndDate`).
+  - `hasPhysicalWork = false`: Paket murni material/logistik; jadwal fisik dinonaktifkan, progres diukur dari pemenuhan volume kedatangan barang.
+- **Validasi Bobot**: Akumulasi total `weightPct` seluruh paket per proyek tidak boleh melebihi 100%.
+
+### 3.5 `POST /api/projects/[id]/packages/[packageId]/deliveries`
 ```json
 {
   "deliveryDate": "2026-11-18",
@@ -76,10 +91,10 @@ Request tidak berubah dari v1. Response `201`: `projectCode` berformat `WM-CMP01
 ```
 Efek dalam satu transaksi: insert `PackageDelivery` + `PackageDeliveryItem`; akumulasi `PackageItem.qtyReceived`; `WorkPackage.actualDeliveryDate` = tanggal kiriman terbaru; status paket → `PARTIALLY_DELIVERED` atau `DELIVERED` (bila Σ received ≥ planned); hitung `deliveryDelayDays`.
 
-### 3.5 `POST /api/projects/[id]/bast/verify`
+### 3.6 `POST /api/projects/[id]/bast/verify`
 Role: SUPER_ADMIN. Body kosong atau `{ "notes": "..." }`. Mengisi `verifiedAt`, `verifiedById`, proyek → `COMPLETED`. **Tidak ada syarat LUNAS** (B8).
 
-### 3.6 `GET /api/reports`
+### 3.7 `GET /api/reports`
 Mendukung 5 jenis laporan operasional terpusat via query param `type`:
 - `project-status`: Status proyek komprehensif, KPI agregat (total, avg progress, counts per indicator).
 - `procurement-outstanding`: Paket dengan paymentStatus != LUNAS atau belum DELIVERED/COMPLETED + kalkulasi delay hari.

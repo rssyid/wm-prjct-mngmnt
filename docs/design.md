@@ -48,6 +48,18 @@ Dipertahankan: Inter + JetBrains Mono via `next/font/google` (subset Latin). Kol
 - **Feedback:** toast/FeedbackModal; sukses auto-close 3 detik; error tetap sampai ditutup.
 - **Destruktif:** `AlertDialog` (hapus, cancel, ON_HOLD dengan alasan wajib).
 - **Filter persisten:** semua filter halaman list ditulis ke URL via nuqs; refresh/back tidak menghilangkan konteks.
+- **Visualisasi Jadwal WBS & Gantt Chart (Mode Ganda):**
+  - **Mode Switcher**: Pengguna dapat beralih antara "Matriks Mingguan" (format spreadsheet rapat WBS perkebunan) dan "Timeline Bar" (batang horizontal klasik dengan milestone).
+  - **Struktur Baris Matriks**:
+    - Baris Administrasi AFCE/AR: Baseline 14 hari kalender, mencatat tahapan paraf 9 role SAP, simbol `#` saat verifikasi dan `✓` saat disetujui penuh.
+    - Baris Paket Kerja Dual-Track: Paket fisik (`hasPhysicalWork = true`) otomatis memiliki 2 sub-baris (Pengadaan & Pelaksanaan Fisik). Paket murni material (`hasPhysicalWork = false`) hanya menampilkan baris Pengadaan.
+  - **Legenda & Status Sel Matriks**:
+    - `PLAN`: Latar belakang biru pudar (`bg-blue-50 dark:bg-blue-950/40`) jadwal rencana dasar.
+    - `REVISED`: Latar belakang amber (`bg-amber-100 dark:bg-amber-950/60`) jadwal revisi/keterlambatan.
+    - `THIS_WEEK_REVISED`: Border khusus target revisi pada minggu berjalan.
+    - Simbol `#`: Aktivitas/progres aktif berjalan pada minggu bersangkutan.
+    - Simbol `✓`: Selesai tuntas (barang tiba lengkap untuk pengadaan, atau **100% mutlak** untuk fisik lapangan).
+  - **Header Kolom Mingguan**: Label minggu $W_1, W_2, \dots$, rentang tanggal `dd/mm`, dan penanda minggu berjalan (*Current Week*).
 - **Tabel Laporan 6 Kolom Padat:**
   - Standar kolom: `(1) Chevron/Indent ↳` → `(2) Paket & Rekanan` → `(3) Pengadaan & Logistik` → `(4) Realisasi Fisik & Volume` → `(5) Jadwal Lapangan` → `(6) Aksi`.
   - Warna bar progres: Hijau (`bg-emerald-500`) untuk fisik, Biru/Sky (`bg-sky-500`) untuk murni material.

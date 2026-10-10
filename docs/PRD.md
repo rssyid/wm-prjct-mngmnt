@@ -38,8 +38,8 @@ Satu sumber kebenaran (single source of truth) untuk seluruh siklus hidup proyek
 | F-05 | Pengadaan: AFCE/AR (checklist, approval berjenjang dengan attempt history, supplementary paralel); WorkPackage (PR/PO, vendor, nilai); kedatangan berulang per item; dokumen PR/PO/DO/Invoice | P0 |
 | F-06 | Realisasi: progres mingguan (1 log/paket/minggu), log alat berat, pembayaran per paket, BAST (verifikasi SUPER_ADMIN) | P0 |
 | F-07 | Manajemen proyek: state machine (lihat WORKFLOW.md), EWS/SLA, ON_HOLD/CANCELLED, soft delete berantai, dashboard | P0 |
-| F-08 | Gantt Chart & S-Curve WBS Matriks: pemisahan jadwal pengadaan & fisik lapangan, kurva S tersinkronisasi cut-off mingguan dan baseline, spreadsheet-style matrix | P1 |
-| F-09 | Laporan & Export (PDF & Excel): 3 Tab terpadu (Tab 1: Overview & PDF Status, Tab 2: Matriks Persetujuan 9-Role SAP + Excel, Tab 3: Progres Siklus Hidup & Rincian Paket 6-Kolom + Excel) | P1 |
+| F-08 | Visualisasi Jadwal WBS & Kurva S: Mode Ganda (1. Matriks Mingguan spreadsheet-style dengan sub-baris Pengadaan vs Fisik 100%, legenda PLAN/REVISED/THIS_WEEK_REVISED, simbol '#' & '✓', milestone AFCE 14 hari 9-role SAP; 2. Timeline Bar horizontal klasik dengan milestone), serta Kurva S Recharts kumulatif | P1 |
+| F-09 | Sistem Laporan Terpadu 3-Tab: Tab 1 "Ringkasan Eksekutif" (KPI portofolio & status), Tab 2 "Progres & Fisik Lapangan" (Tabel 6-Kolom Padat tanpa scroll horizontal), Tab 3 "Pengadaan & Material" (Outstanding PO, Keterlambatan, Pembayaran); filter multi-select perusahaan (`nuqs`); ekspor dinamis PDF (jspdf) & Excel (xlsx) | P1 |
 
 ### 4.1 Alur Status
 
@@ -59,7 +59,7 @@ Lihat `WORKFLOW.md` §1–2 (sumber kebenaran). Ringkasan:
 - AC: maksimal 1 log per paket per minggu; koreksi hanya untuk minggu berjalan; agregat bobot dihitung ulang otomatis di server; tidak bisa input tanggal masa depan. Tanggal selesai fisik tercatat otomatis saat mencapai 100%.
 
 **US-04 — Memantau Portofolio & Laporan**
-> Sebagai **Manajemen / HO**, saya memantau portofolio proyek melalui 3 tab laporan interaktif: Overview Status, Matriks Persetujuan AR (9 Role SAP), dan Rincian Paket Kerja (6 Kolom padat dengan kategori proyek terkelompok).
+> Sebagai **Manajemen / HO**, saya memantau portofolio proyek melalui 3 tab laporan interaktif: Tab 1 "Ringkasan Eksekutif" (KPI portofolio & status), Tab 2 "Progres & Fisik Lapangan" (Tabel 6-Kolom Padat tanpa scroll horizontal), dan Tab 3 "Pengadaan & Material" (Outstanding PO, Keterlambatan, Pembayaran).
 
 ## 6. Keputusan Bisnis (dari sesi 07/10/2026 & Pembaruan Terkini)
 
